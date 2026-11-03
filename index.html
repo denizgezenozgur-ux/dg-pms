@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>DG PMS</title>
+<meta name="theme-color" content="#0E3A5F">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="DG PMS">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style>
+</head>
+<body>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: one working column like a maintenance log; due list on top, job card opens as a full page with a pinned copy bar. */
+:root{
+  /* Single look taken from the DG PMS icon: navy ground, white cards, orange waves */
+  --page:#0E3A5F; --page-ink:#FFFFFF; --page-muted:#AFC6DC; --page-deep:#0A2C48;
+  --bg:#EEF3F8; --surface:#FFFFFF; --ink:#0E2A44; --muted:#5B6E82; --line:#C9D6E3;
+  --navy:#0E3A5F; --orange:#F28C28; --orange-ink:#B85E0C; --orange-soft:#FDEBD8;
+  --over:#B42318; --over-soft:#FDE4E1; --soon:#A86200; --soon-soft:#FFF1D6; --ok:#2E7D4F; --ok-soft:#E1F3E8;
+  --f-display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+body{background:var(--page);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
+.wrap{max-width:820px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:18px 40px;display:flex;flex-direction:column;gap:16px}
+.brand{display:flex;align-items:center;gap:12px}
+.brand img{width:48px;height:48px;border-radius:11px;flex:none}
+.eyebrow{font-family:var(--f-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--orange)}
+.waves{display:block;width:100%;height:22px;margin-top:-6px}
+h1{font-family:var(--f-display);font-weight:700;font-size:32px;line-height:1;margin:2px 0 0;text-wrap:balance;color:var(--page-ink)}
+.sub{color:var(--page-muted);font-size:13px;margin:0}
+.sum{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+@media (max-width:560px){.sum{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.sum button{font:inherit;text-align:left;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:8px 10px;cursor:pointer;display:flex;flex-direction:column;gap:0;min-width:0}
+.sum b{font-family:var(--f-display);font-size:28px;line-height:1.05;font-variant-numeric:tabular-nums}
+.sum span{font-size:12px;color:var(--muted)}
+.sum button{border-color:transparent}
+.sum button[aria-pressed="true"]{border-color:var(--orange);box-shadow:inset 0 0 0 2px var(--orange)}
+.sum .over b{color:var(--over)}.sum .soon b{color:var(--soon)}.sum .okk b{color:var(--ok)}
+input,select,textarea{font:inherit;font-size:15px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:9px 10px;width:100%;min-width:0}
+textarea{min-height:64px;resize:vertical}
+:focus-visible{outline:2px solid var(--orange);outline-offset:2px}
+.list{display:flex;flex-direction:column;gap:8px}
+.job{box-shadow:0 1px 0 rgba(0,0,0,.12);border-color:transparent;display:grid;grid-template-columns:6px minmax(0,1fr) auto;align-items:stretch;background:var(--surface);border:1px solid var(--line);border-radius:8px;overflow:hidden;cursor:pointer;text-align:left;font:inherit;color:inherit;padding:0;width:100%}
+.job .bar{background:var(--line)}
+.job.over .bar{background:var(--over)}.job.soon .bar{background:var(--soon)}.job.okk .bar{background:var(--ok)}
+.job .mid{padding:10px 12px;min-width:0;display:flex;flex-direction:column;gap:2px}
+.job .nm{font-weight:600;line-height:1.3}
+.job .tr{color:var(--muted);font-size:13px;line-height:1.3}
+.job .meta{font-family:var(--f-mono);font-size:11.5px;color:var(--muted);display:flex;flex-wrap:wrap;gap:2px 12px;margin-top:4px;font-variant-numeric:tabular-nums}
+.job .right{padding:10px 12px 10px 0;display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:4px}
+.pill{font-family:var(--f-mono);font-size:11px;padding:2px 8px;border-radius:999px;white-space:nowrap;background:var(--bg);color:var(--muted)}
+.pill.over{background:var(--over-soft);color:var(--over)}.pill.soon{background:var(--soon-soft);color:var(--soon)}.pill.okk{background:var(--ok-soft);color:var(--ok)}
+.tags{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+.tag{font-family:var(--f-mono);font-size:10px;letter-spacing:.06em;border:1px solid var(--line);border-radius:4px;padding:0 5px;color:var(--muted)}
+.tag.p{border-color:var(--orange);color:var(--orange-ink);background:var(--orange-soft)}
+.empty{color:var(--page-muted);text-align:center;padding:24px}
+/* detail */
+.top{display:flex;align-items:center;gap:10px}
+.brand img{box-shadow:0 0 0 2px rgba(255,255,255,.15)}
+.back{font:inherit;font-weight:600;border:0;background:var(--surface);color:var(--ink);border-radius:6px;padding:7px 12px;cursor:pointer}
+.dh h2{font-family:var(--f-display);font-size:28px;line-height:1.05;margin:4px 0 0;color:var(--page-ink)}
+.dh h2 span{display:block;font-size:18px;color:var(--page-muted);font-weight:600}
+.facts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+@media (max-width:560px){.facts{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.facts div{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0}
+.facts small{display:block;font-family:var(--f-mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.facts b{font-variant-numeric:tabular-nums}
+.lbl{display:flex;flex-direction:column;gap:4px;font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--page-muted)}
+.setin .lbl{color:var(--muted)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.sec{font-family:var(--f-mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--orange);margin-top:4px}
+.steps{display:flex;flex-direction:column;gap:8px}
+.step{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--ok);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.step.nd{border-left-color:var(--over)}.step.na{border-left-color:var(--line);opacity:.75}
+.step .t{font-weight:600;line-height:1.3}.step .t span{display:block;font-weight:400;color:var(--muted);font-size:13px}
+.seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{font:inherit;font-size:13.5px;font-weight:600;border:0;border-left:1px solid var(--line);background:var(--bg);color:var(--muted);padding:7px 4px;cursor:pointer}
+.seg button:first-child{border-left:0}
+.seg button[aria-pressed="true"].d{background:var(--ok);color:var(--surface)}
+.seg button[aria-pressed="true"].n{background:var(--over);color:var(--surface)}
+.seg button[aria-pressed="true"].x{background:var(--muted);color:var(--surface)}
+.report{background:var(--surface);border:1px solid var(--line);border-top:4px solid var(--orange);border-radius:8px;padding:12px;font-family:var(--f-mono);font-size:12.5px;white-space:pre-wrap;word-break:break-word;margin:0}
+.btnrow{display:flex;flex-wrap:wrap;gap:8px}
+.btn{font-family:var(--f-display);font-size:17px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;border:0;border-radius:6px;padding:11px 14px;cursor:pointer;background:var(--navy);color:#fff}
+.btn.o{background:var(--orange);color:#fff}
+.btn.g{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+.hist{display:flex;flex-direction:column;gap:6px;font-size:13px}
+.hist div{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:6px 10px}
+.hist b{font-family:var(--f-mono);font-weight:500}
+.copybar{position:fixed;left:0;right:0;bottom:0;background:var(--page-deep);border-top:3px solid var(--orange);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-top:10px;padding-bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:5}
+.copybar .in{max-width:820px;margin:0 auto;display:grid;grid-template-columns:2fr 1fr 1fr 2fr;gap:8px}
+.copybar button{font-family:var(--f-display);font-size:16px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;border:0;border-radius:6px;padding:11px 6px;cursor:pointer;background:#fff;color:var(--navy)}
+.copybar .save{background:var(--orange);color:var(--navy)}
+#detail .wrap{padding-bottom:110px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(80px + env(safe-area-inset-bottom,0px));background:var(--orange);color:var(--navy);font-weight:600;padding:8px 16px;border-radius:999px;font-size:14px;z-index:6;max-width:90vw;text-align:center}
+details.set{background:var(--surface);border:0;border-radius:8px;padding:12px}
+details.set summary{cursor:pointer;font-weight:600}
+details.set[open] summary{margin-bottom:10px}
+.setin{display:flex;flex-direction:column;gap:10px}
+.note{font-size:13px;color:var(--page-muted);margin:0}
+details.set .note{color:var(--muted)}
+#fallback{min-height:140px;font-family:var(--f-mono);font-size:12px}
+@media (prefers-reduced-motion:no-preference){.job,.sum button{transition:border-color .15s,background .15s}}
+</style>
+
+<div id="listView">
+<div class="wrap">
+  <header class="brand">
+    <img src="icons/icon-192.png" alt="" width="48" height="48" id="logo">
+    <div><div class="eyebrow" id="eb" lang="en">PMS · Chief Officer</div><h1>Planlı Bakım</h1></div>
+  </header>
+  <svg class="waves" viewBox="0 0 400 22" preserveAspectRatio="none" aria-hidden="true"><path d="M0 9 C60 2 120 2 180 8 C240 14 300 14 400 6" fill="none" stroke="#F28C28" stroke-width="3.2" stroke-linecap="round"/><path d="M0 18 C70 12 130 12 190 16 C250 20 320 20 400 14" fill="none" stroke="#F28C28" stroke-width="3.2" stroke-linecap="round"/></svg>
+  <p class="sub" id="today"></p>
+  <div class="sum" id="sum"></div>
+  <input type="search" id="q" placeholder="İş ara: anchor, ballast, hatch…" aria-label="İş ara">
+  <div class="list" id="list"></div>
+  <details class="set" id="set">
+    <summary>Ayarlar ve yedek</summary>
+    <div class="setin">
+      <label class="lbl">Gemi adı (raporda görünür)<input id="ship" placeholder="M/V ..."></label>
+      <p class="note">Tarihler bu telefonda saklanır. Ara sıra yedek kodunu al ve kendine mesaj at.</p>
+      <div class="btnrow"><button class="btn g" id="bkCopy" type="button">Yedek kodunu kopyala</button></div>
+      <label class="lbl">Yedek kodunu yapıştır<input id="bkIn" placeholder="Yedek kodu"></label>
+      <div class="btnrow"><button class="btn g" id="bkLoad" type="button">Geri yükle</button><button class="btn g" id="reset" type="button">Excel tarihlerine dön</button></div>
+    </div>
+  </details>
+</div>
+</div>
+
+<div id="detail" hidden>
+<div class="wrap" id="dwrap"></div>
+<div class="copybar"><div class="in">
+  <button id="cpBoth">Kopyala EN+TR</button><button id="cpEn">EN</button><button id="cpTr">TR</button><button class="save" id="saveDone">Kaydet</button>
+</div></div>
+</div>
+<textarea id="fallback" hidden readonly></textarea>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+/* Step library: [en, tr, [[resultEN, resultTR], ...]] — first result is the normal outcome */
+const L={
+VIS:["Visual inspection for corrosion, cracks and damage","Korozyon, çatlak ve hasar için gözle kontrol",[
+ ["Satisfactory, no defects found","Uygun, hata bulunmadı"],
+ ["Light surface rust found; wire brushed and touched up","Hafif yüzey pası bulundu; tel fırçalandı ve rötuş boyası yapıldı"],
+ ["Heavy corrosion found; reported, repair planned","Ağır korozyon bulundu; raporlandı, onarım planlandı"],
+ ["Mechanical damage found; reported to the Master","Mekanik hasar bulundu; Kaptana raporlandı"]]],
+CLEAN:["Cleaning and removal of debris / cargo residues","Temizlik, döküntü ve yük kalıntılarının alınması",[
+ ["Cleaned, found clear","Temizlendi, açık durumda"],
+ ["Heavy cargo residue removed","Yoğun yük kalıntısı temizlendi"],
+ ["Found blocked; cleared and flushed with water","Tıkalı bulundu; açıldı ve su ile yıkandı"]]],
+GASKET:["Rubber gaskets and seals checked","Lastik contalar ve sızdırmazlık elemanları kontrol edildi",[
+ ["Gaskets in good condition","Contalar iyi durumda"],
+ ["Damaged section of gasket renewed","Contanın hasarlı bölümü yenilendi"],
+ ["Gasket hardened / permanently set; renewal requested, spare ordered","Conta sertleşmiş / ezilmiş; yenileme istendi, yedek sipariş edildi"]]],
+CLOSE:["Closing devices, dogs, cleats and hinges checked and greased","Kapama düzenekleri, mandallar, kilitler ve menteşeler kontrol edilip yağlandı",[
+ ["All free moving and greased","Hepsi serbest çalışıyor ve yağlandı"],
+ ["Seized dog/cleat freed and greased","Sıkışmış mandal/kilit serbestlendi ve yağlandı"],
+ ["Defective dog/cleat found; repair required","Arızalı mandal/kilit bulundu; onarım gerekli"]]],
+CHALK:["Chalk test / hose test for weathertightness","Sızdırmazlık için tebeşir testi / hortum testi",[
+ ["Tight, no leakage","Sızdırmaz, kaçak yok"],
+ ["Poor contact found; compression adjusted, re-tested OK","Zayıf temas bulundu; sıkıştırma ayarlandı, tekrar test uygun"],
+ ["Leakage found; repair required","Kaçak bulundu; onarım gerekli"]]],
+OPER:["Operational test","Çalışma testi",[
+ ["Operated satisfactorily","Sorunsuz çalıştı"],
+ ["Operated after adjustment","Ayar sonrası çalıştı"],
+ ["Not operating properly; reported, repair required","Düzgün çalışmıyor; raporlandı, onarım gerekli"]]],
+GREASE:["Greasing of moving parts and grease nipples","Hareketli parçaların ve gresörlüklerin yağlanması",[
+ ["Greased","Gres yağı basıldı"],
+ ["Blocked grease nipple renewed and greased","Tıkalı gresörlük yenilendi ve yağlandı"],
+ ["Could not be greased; nipple to be renewed","Yağlama yapılamadı; gresörlük yenilenecek"]]],
+MARK:["Markings, labels and ID plates checked","İşaretler, etiketler ve kimlik plakaları kontrol edildi",[
+ ["Legible and in place","Okunaklı ve yerinde"],
+ ["Faded markings repainted","Silinmiş işaretler yeniden boyandı"]]],
+PIPE:["Pipes, joints, flanges and supports checked for leakage and corrosion","Borular, bağlantılar, flanşlar ve destekler kaçak ve korozyon için kontrol edildi",[
+ ["No leakage, condition good","Kaçak yok, durum iyi"],
+ ["Loose clamp / support tightened or renewed","Gevşek kelepçe / destek sıkıldı veya yenilendi"],
+ ["Leaking joint found; gasket renewed","Kaçak yapan bağlantı bulundu; conta yenilendi"],
+ ["Corrosion / wall thinning found; pipe repair planned","Korozyon / et kalınlığı incelmesi bulundu; boru onarımı planlandı"]]],
+VALVE:["Valves operated full stroke and spindles greased","Valfler tam strok açılıp kapatıldı, milleri yağlandı",[
+ ["All valves operate freely","Tüm valfler serbest çalışıyor"],
+ ["Stiff valve freed and greased","Sıkı valf serbestlendi ve yağlandı"],
+ ["Valve passing / seized; overhaul required","Valf kaçırıyor / sıkışık; bakım gerekli"]]],
+PRESS:["Pressure test","Basınç testi",[
+ ["Pressure held, no leakage","Basınç tuttu, kaçak yok"],
+ ["Minor leak found and rectified; re-tested OK","Küçük kaçak bulunup giderildi; tekrar test uygun"],
+ ["Failed pressure test; repair required","Basınç testini geçemedi; onarım gerekli"]]],
+PAINT:["Touch-up painting of affected areas","Gereken bölgelerde rötuş boyası",[
+ ["Not required, coating intact","Gerek yok, boya sağlam"],
+ ["Touch-up painting carried out","Rötuş boyası yapıldı"],
+ ["Larger area needs chipping and painting; planned","Daha geniş alan raspa ve boya istiyor; planlandı"]]],
+LUBE:["Oil level checked and topped up","Yağ seviyesi kontrol edildi, eksik tamamlandı",[
+ ["Oil level normal","Yağ seviyesi normal"],
+ ["Topped up with correct grade oil","Doğru sınıf yağ ile tamamlandı"],
+ ["Oil contaminated / milky; oil changed","Yağ kirli / sütlü; yağ değiştirildi"]]],
+ENTRY:["Enclosed space entry: permit, ventilation and atmosphere test","Kapalı mahal girişi: izin, havalandırma ve atmosfer ölçümü",[
+ ["Permit issued; O2 20.9%, LEL 0%, H2S/CO nil; entry made","İzin verildi; O2 %20,9, LEL %0, H2S/CO yok; girildi"],
+ ["Entry postponed; atmosphere not safe, ventilation continued","Giriş ertelendi; atmosfer uygun değil, havalandırmaya devam edildi"]]],
+PERMIT:["Work permit and risk assessment","Çalışma izni ve risk değerlendirmesi",[
+ ["Permit issued and closed after completion","İzin verildi, iş bitince kapatıldı"],
+ ["Covered by the existing risk assessment","Mevcut risk değerlendirmesi kapsamında"]]],
+COAT:["Coating, structure and anodes inspected","Boya, yapı ve anotlar incelendi",[
+ ["Coating GOOD, anodes effective","Boya İYİ, anotlar etkin"],
+ ["Coating FAIR, local breakdown; touched up","Boya ORTA, lokal bozulma; rötuş yapıldı"],
+ ["Coating POOR; reported to the company","Boya KÖTÜ; şirkete raporlandı"],
+ ["Sediment found and removed","Tortu bulundu ve temizlendi"]]],
+WIRE:["Wire rope inspected (broken wires, kinks, corrosion) and lubricated","Tel halat incelendi (kopuk tel, büküm, korozyon) ve yağlandı",[
+ ["Wire in good condition, lubricated","Tel iyi durumda, yağlandı"],
+ ["Few broken wires within limits; under monitoring","Sınır içinde az sayıda kopuk tel; takipte"],
+ ["Wire beyond discard criteria; renewal required","Tel ıskarta kriterini aşmış; yenileme gerekli"]]],
+BRAKE:["Brake checked: linings, adjustment and holding","Fren kontrol edildi: balatalar, ayar ve tutma",[
+ ["Brake holds, linings within limits","Fren tutuyor, balatalar sınırlar içinde"],
+ ["Brake adjusted","Fren ayarlandı"],
+ ["Linings worn; renewed","Balatalar aşınmış; yenilendi"],
+ ["Linings worn; renewal required, spares ordered","Balatalar aşınmış; yenileme gerekli, yedek sipariş edildi"]]],
+ELEC:["Electrical connections, insulation and indicator lamps checked","Elektrik bağlantıları, izolasyon ve gösterge lambaları kontrol edildi",[
+ ["Normal","Normal"],
+ ["Loose terminal tightened / lamp renewed","Gevşek terminal sıkıldı / lamba yenilendi"],
+ ["Low insulation / earth fault found; reported to C/E","Düşük izolasyon / toprak kaçağı bulundu; Başmühendise bildirildi"]]],
+LEAK:["Checked for oil leakage, abnormal noise and temperature","Yağ kaçağı, anormal ses ve sıcaklık kontrol edildi",[
+ ["No leakage, running normal","Kaçak yok, normal çalışıyor"],
+ ["Minor weep found; fitting tightened","Hafif sızıntı bulundu; rakor sıkıldı"],
+ ["Leakage / abnormal noise; reported to C/E","Kaçak / anormal ses; Başmühendise bildirildi"]]]
+};
+const C=(en,tr,res)=>[en,tr,res];
+
+
+const JOBS_TXT={"Air Vents": {"tr": "Hava Firarları", "s": ["VIS", ["Float / ball closing devices and seats checked", "Şamandıra / bilye kapama düzenekleri ve yuvaları kontrol edildi", [["Floats free, seats clean", "Şamandıralar serbest, yuvalar temiz"], ["Stuck float freed and cleaned", "Sıkışmış şamandıra serbestlendi ve temizlendi"], ["Float / seat defective; renewed", "Şamandıra / yuva arızalı; yenilendi"], ["Float / seat defective; spare requested", "Şamandıra / yuva arızalı; yedek istendi"]]], ["Flame screens / wire mesh checked", "Alev tutucu elekler / tel kafesler kontrol edildi", [["Intact and clean", "Sağlam ve temiz"], ["Clogged screen cleaned", "Tıkalı elek temizlendi"], ["Torn screen renewed", "Yırtık elek yenilendi"]]], "GASKET", "MARK"]}, "Scuppers": {"tr": "Frengiler", "s": ["CLEAN", ["Scupper plugs on board and in good condition", "Frengi tapaları gemide ve iyi durumda", [["Complete and in good condition", "Tam ve iyi durumda"], ["Missing / damaged plugs replaced", "Eksik / hasarlı tapalar tamamlandı"]]], ["Non-return flaps / valves checked", "Geri dönüşsüz klapeler / valfler kontrol edildi", [["Free and closing properly", "Serbest ve düzgün kapanıyor"], ["Seized flap freed and greased", "Sıkışmış klape serbestlendi ve yağlandı"], ["Defective; repair required", "Arızalı; onarım gerekli"]]], "VIS"]}, "Ventilators & Dampers": {"tr": "Vantilatörler ve Damperler", "s": ["VIS", ["Closing flaps / dampers operated open-close", "Kapama klapeleri / damperler açılıp kapatıldı", [["Operate freely, close tight", "Serbest çalışıyor, sızdırmaz kapanıyor"], ["Stiff damper freed and greased", "Sıkı damper serbestlendi ve yağlandı"], ["Damper does not close fully; repair required", "Damper tam kapanmıyor; onarım gerekli"]]], "GASKET", "GREASE", ["Open / closed position markings checked", "Açık / kapalı konum işaretleri kontrol edildi", [["Clearly marked", "Açıkça işaretli"], ["Markings renewed", "İşaretler yenilendi"]]]]}, "Portlights": {"tr": "Lomboz", "s": [["Glass and frames checked", "Camlar ve çerçeveler kontrol edildi", [["Intact, no cracks", "Sağlam, çatlak yok"], ["Cracked glass found; reported, renewal required", "Çatlak cam bulundu; raporlandı, yenileme gerekli"]]], ["Deadlights (storm covers) checked and closed test", "Fırtına kapakları kontrol edildi, kapatma denendi", [["Close and secure properly", "Düzgün kapanıyor ve emniyetli"], ["Stiff hinge freed and greased", "Sıkı menteşe serbestlendi ve yağlandı"]]], "GASKET", "CLOSE"]}, "Main Deck Air Valve": {"tr": "Ana Güverte Hava Valfi", "s": ["VALVE", "PIPE", ["Air drained, water trap checked", "Hava boşaltıldı, su tutucu kontrol edildi", [["No water found", "Su yok"], ["Water drained from line", "Hattaki su boşaltıldı"]]], "MARK"]}, "Coaming drain channel -  hole -  pipe- valves - fire caps": {"tr": "Mezarna Drenaj Kanalı, Delikleri, Boruları, Valfleri ve Kapakları", "s": ["CLEAN", ["Drain holes and pipes checked for blockage", "Drenaj delikleri ve boruları tıkanıklık için kontrol edildi", [["Clear", "Açık"], ["Blocked drain cleared", "Tıkalı drenaj açıldı"]]], ["Drain non-return valves checked", "Drenaj geri dönüşsüz valfleri kontrol edildi", [["Free and closing", "Serbest ve kapanıyor"], ["Seized valve freed", "Sıkışmış valf serbestlendi"], ["Defective; renewal required", "Arızalı; yenileme gerekli"]]], ["Drain caps / plugs on board and fitted", "Drenaj kapakları / tapaları gemide ve takılı", [["Complete", "Tam"], ["Missing caps replaced", "Eksik kapaklar tamamlandı"]]], "VIS"]}, "General structural ": {"tr": "Genel Yapısal Kontrol", "s": ["VIS", ["Deck fittings, bollards, eyes and ladders checked", "Güverte donanımları, babalar, mapalar ve merdivenler kontrol edildi", [["Secure, no defects", "Sağlam, hata yok"], ["Loose fitting secured", "Gevşek donanım sabitlendi"], ["Cracked weld found; repair planned", "Çatlak kaynak bulundu; onarım planlandı"]]], ["Hatch coamings, stays and brackets checked", "Mezarnalar, payandalar ve braketler kontrol edildi", [["Satisfactory", "Uygun"], ["Deformation found; reported", "Deformasyon bulundu; raporlandı"]]], "PAINT"]}, "Bilge Wells, Strainers": {"tr": "Sintine Kuyuları ve Süzgeçleri", "s": ["CLEAN", ["Strainers / rose boxes cleaned", "Süzgeçler / emiş kafesleri temizlendi", [["Cleaned, in good condition", "Temizlendi, iyi durumda"], ["Damaged strainer renewed", "Hasarlı süzgeç yenilendi"]]], ["High level bilge alarms tested", "Yüksek seviye sintine alarmları test edildi", [["All alarms tested OK on bridge", "Tüm alarmlar köprüüstünde uygun test edildi"], ["Faulty alarm sensor; reported to C/E", "Arızalı alarm sensörü; Başmühendise bildirildi"]]], ["Bilge suction and non-return valve tested", "Sintine emişi ve geri dönüşsüz valf test edildi", [["Good suction obtained", "İyi emiş alındı"], ["Poor suction; line cleared", "Zayıf emiş; hat açıldı"]]]]}, "Gantry Crane": {"tr": "Gantri Vinç", "s": ["WIRE", ["Limit switches and emergency stop tested", "Limit şalterleri ve acil stop test edildi", [["All functioning", "Hepsi çalışıyor"], ["Limit switch adjusted", "Limit şalteri ayarlandı"], ["Defective; crane out of use until repaired", "Arızalı; onarılana kadar vinç kullanım dışı"]]], "BRAKE", ["Rails, wheels and stoppers checked", "Raylar, tekerlekler ve stoperler kontrol edildi", [["Satisfactory", "Uygun"], ["Rails cleaned and greased", "Raylar temizlendi ve yağlandı"]]], "GREASE", ["SWL marking and certificate checked", "SWL işareti ve sertifikası kontrol edildi", [["Marked, certificate valid", "İşaretli, sertifika geçerli"], ["SWL marking repainted", "SWL işareti yeniden boyandı"]]]]}, "Piping Arrangement": {"tr": "Güverte Boru Tesisatı", "s": ["PIPE", "VALVE", ["Pipe supports, U-bolts and expansion joints checked", "Boru destekleri, U-cıvatalar ve genleşme parçaları kontrol edildi", [["Secure", "Sağlam"], ["Missing / corroded U-bolt renewed", "Eksik / paslı U-cıvata yenilendi"]]], "PAINT"]}, "Structural Conditon ": {"tr": "Yapısal Durum", "s": ["VIS", ["Deck plating checked for pitting and deformation", "Güverte sacı oyuklanma ve deformasyon için kontrol edildi", [["No significant pitting or deformation", "Belirgin oyuklanma veya deformasyon yok"], ["Local pitting found; recorded for monitoring", "Lokal oyuklanma bulundu; takip için kaydedildi"], ["Deformation / thinning found; reported to company", "Deformasyon / incelme bulundu; şirkete raporlandı"]]], ["Hatch coaming brackets and top plates checked", "Mezarna braketleri ve üst sacları kontrol edildi", [["Satisfactory", "Uygun"], ["Cracks found; repair planned", "Çatlak bulundu; onarım planlandı"]]], "PAINT"]}, "Anchor and Anchor Chain Visual Inspection": {"tr": "Demir ve Demir Zinciri Gözle Kontrol", "s": [["Anchor, shank, crown and flukes inspected", "Demir, gövde, tepe ve tırnaklar incelendi", [["No defects", "Hata yok"], ["Rust removed and painted", "Pas alındı ve boyandı"], ["Crack / deformation found; reported", "Çatlak / deformasyon bulundu; raporlandı"]]], ["Chain links, studs and shackles inspected", "Zincir baklaları, kuşakları (stud) ve kilitler incelendi", [["No loose studs, wear acceptable", "Gevşek kuşak yok, aşınma kabul edilebilir"], ["Loose stud found; recorded for repair", "Gevşek kuşak bulundu; onarım için kaydedildi"], ["Excessive wear; reported to company", "Aşırı aşınma; şirkete raporlandı"]]], ["Shackle marks (shot marks) checked", "Kilit (şakıl) işaretleri kontrol edildi", [["Clearly marked", "Açıkça işaretli"], ["Marks renewed with paint and wire", "İşaretler boya ve tel ile yenilendi"]]], ["Swivel, kenter / joining shackle and chain stopper checked", "Fırdöndü, kenter kilidi ve zincir stoperi kontrol edildi", [["Free and in good condition", "Serbest ve iyi durumda"], ["Swivel freed and greased", "Fırdöndü serbestlendi ve yağlandı"]]]]}, "Fairleader": {"tr": "Kurt Ağzı / Makaralı Fairlead", "s": [["Rollers turned by hand, free rotation checked", "Makaralar elle döndürüldü, serbest dönüş kontrol edildi", [["All rollers rotate freely", "Tüm makaralar serbest dönüyor"], ["Seized roller freed", "Sıkışmış makara serbestlendi"], ["Roller seized; overhaul required", "Makara sıkışık; bakım gerekli"]]], "GREASE", ["Rope contact surfaces checked for grooves and sharp edges", "Halat temas yüzeyleri oluk ve keskin kenar için kontrol edildi", [["Smooth, no grooves", "Pürüzsüz, oluk yok"], ["Sharp edge ground smooth", "Keskin kenar taşlanıp düzeltildi"], ["Deep groove found; repair planned", "Derin oluk bulundu; onarım planlandı"]]], "VIS"]}, "Watertight  and Weathertight Doors": {"tr": "Su Geçirmez ve Hava Geçirmez Kapılar", "s": ["GASKET", "CLOSE", "CHALK", ["Door open / closed indicators and alarms tested", "Kapı açık / kapalı göstergeleri ve alarmları test edildi", [["All indications correct", "Tüm göstergeler doğru"], ["Indicator adjusted", "Gösterge ayarlandı"], ["No indicators fitted, not applicable", "Gösterge yok, uygulanmaz"]]], ["Notices \"Keep closed at sea\" in place", "\"Denizde kapalı tutun\" uyarıları yerinde", [["In place", "Yerinde"], ["Missing notice renewed", "Eksik uyarı yenilendi"]]]]}, "Small Hatches": {"tr": "Küçük Kapaklar (Kaçış ve Giriş Kapakları)", "s": ["GASKET", "CLOSE", ["Opening from both sides tested (escape hatches)", "Her iki taraftan açma denendi (kaçış kapakları)", [["Opens from both sides", "Her iki taraftan açılıyor"], ["Stiff; freed and greased", "Sıkı; serbestlendi ve yağlandı"]]], "CHALK", "MARK"]}, "Bearing pad  surface ": {"tr": "Ambar Kapağı Yatak Pedi Yüzeyleri", "s": [["Bearing pads cleaned and checked for wear", "Yatak pedleri temizlendi, aşınma kontrol edildi", [["Wear within limits", "Aşınma sınırlar içinde"], ["Uneven wear found; recorded for monitoring", "Düzensiz aşınma bulundu; takip için kaydedildi"], ["Pad worn beyond limit; renewal required", "Ped sınırın ötesinde aşınmış; yenileme gerekli"]]], ["Pad securing bolts / welds checked", "Ped bağlantı cıvataları / kaynakları kontrol edildi", [["Secure", "Sağlam"], ["Loose bolt tightened", "Gevşek cıvata sıkıldı"], ["Cracked weld; repair planned", "Çatlak kaynak; onarım planlandı"]]], ["Pad surfaces greased (if required by maker)", "Ped yüzeyleri yağlandı (üretici istiyorsa)", [["Greased", "Yağlandı"], ["Not required (self-lubricating)", "Gerek yok (kendinden yağlamalı)"]]]]}, "Windlass  (Replacement of brake linings)": {"tr": "Irgat (Fren Balataları)", "s": [["Brake lining thickness measured", "Fren balatası kalınlığı ölçüldü", [["Within limits, no renewal needed", "Sınırlar içinde, değişim gerekmiyor"], ["At limit; linings renewed", "Sınırda; balatalar yenilendi"], ["Worn; renewal required, spares ordered", "Aşınmış; yenileme gerekli, yedek sipariş edildi"]]], ["Brake band, pins and adjusting screw checked", "Fren bandı, pimler ve ayar vidası kontrol edildi", [["Satisfactory", "Uygun"], ["Adjusted and greased", "Ayarlandı ve yağlandı"]]], "LUBE", ["Gypsy (cable lifter) and clutch checked", "Kaplan (zincir dişlisi) ve kavrama kontrol edildi", [["Engage freely, wear acceptable", "Serbest kavranıyor, aşınma kabul edilebilir"], ["Clutch freed and greased", "Kavrama serbestlendi ve yağlandı"]]], "GREASE"]}, "Fresh Water Tanks": {"tr": "Tatlı Su Tankları", "s": ["ENTRY", ["Tank cleaned and flushed", "Tank temizlendi ve yıkandı", [["Cleaned, no sediment", "Temizlendi, tortu yok"], ["Sediment removed", "Tortu temizlendi"]]], "COAT", ["Tank disinfected (chlorination) and refilled", "Tank dezenfekte edildi (klorlama) ve dolduruldu", [["Chlorinated and refilled", "Klorlandı ve dolduruldu"], ["Water sample taken for analysis", "Analiz için su numunesi alındı"]]]]}, "Guardrails (Stantions & Rails)": {"tr": "Korkuluklar (Dikmeler ve Küpeşteler)", "s": ["VIS", ["Stanchions, rails and welds checked for security", "Dikmeler, küpeşteler ve kaynaklar sağlamlık için kontrol edildi", [["Secure", "Sağlam"], ["Loose / bent section repaired", "Gevşek / eğik bölüm onarıldı"], ["Wasted stanchion found; renewal planned", "Erimiş dikme bulundu; yenileme planlandı"]]], ["Removable rails, chains and pins checked", "Sökülebilir korkuluklar, zincirler ve pimler kontrol edildi", [["Complete and secured", "Tam ve emniyetli"], ["Missing pin / chain replaced", "Eksik pim / zincir tamamlandı"]]], "PAINT"]}, "Hydraulic pressure piping system.": {"tr": "Hidrolik Basınç Boru Sistemi", "s": ["PIPE", ["Flexible hoses checked (condition and date)", "Esnek hortumlar kontrol edildi (durum ve tarih)", [["In good condition, within date", "İyi durumda, tarihi geçerli"], ["Chafed hose renewed", "Sürtünmüş hortum yenilendi"], ["Hose overdue; renewal planned", "Hortumun süresi dolmuş; değişim planlandı"]]], "LEAK", ["Pipe clamps and protection checked", "Boru kelepçeleri ve korumaları kontrol edildi", [["Secure", "Sağlam"], ["Loose clamp tightened", "Gevşek kelepçe sıkıldı"]]]]}, "Pressure Air Piping": {"tr": "Basınçlı Hava Boruları", "s": ["PIPE", ["Water traps / drains blown down", "Su tutucular / drenajlar boşaltıldı", [["No water", "Su yok"], ["Water drained", "Su boşaltıldı"]]], ["Relief valves and pressure gauges checked", "Emniyet valfleri ve manometreler kontrol edildi", [["Satisfactory", "Uygun"], ["Defective gauge renewed", "Arızalı manometre yenilendi"]]], "VALVE"]}, "Main Fire Line": {"tr": "Ana Yangın Hattı", "s": ["PRESS", ["Hydrants operated and spindles greased", "Yangın muslukları açılıp kapatıldı, milleri yağlandı", [["All hydrants operate freely", "Tüm musluklar serbest çalışıyor"], ["Stiff hydrant freed", "Sıkı musluk serbestlendi"], ["Leaking hydrant; repair required", "Kaçıran musluk; onarım gerekli"]]], ["Hoses, nozzles and couplings at stations checked", "İstasyonlardaki hortumlar, lanslar ve rakorlar kontrol edildi", [["Complete, in good condition", "Tam, iyi durumda"], ["Damaged hose / gasket renewed", "Hasarlı hortum / conta yenilendi"]]], ["Isolating valve and international shore connection checked", "İzolasyon valfi ve uluslararası sahil bağlantısı kontrol edildi", [["Satisfactory", "Uygun"], ["Valve freed and greased", "Valf serbestlendi ve yağlandı"]]], "PIPE"]}, "Fixed CO2 Piping": {"tr": "Sabit CO2 Boruları", "s": ["PIPE", ["Distribution lines blown through with compressed air", "Dağıtım hatları basınçlı hava ile üflendi", [["All lines and nozzles clear", "Tüm hatlar ve nozullar açık"], ["Blocked nozzle found and cleared", "Tıkalı nozul bulundu ve açıldı"], ["To be done by shore service company", "Kıyı servis firması tarafından yapılacak"]]], ["Nozzles and pipe supports checked", "Nozullar ve boru destekleri kontrol edildi", [["Satisfactory", "Uygun"], ["Loose support secured", "Gevşek destek sabitlendi"]]], "MARK"]}, "Diesel-Oil Filling Line": {"tr": "Dizel Yakıt Dolum Hattı", "s": ["PRESS", "VALVE", ["Blank flanges, gaskets and bolts at manifold checked", "Manifolddaki kör flanşlar, contalar ve cıvatalar kontrol edildi", [["Complete and tight", "Tam ve sıkı"], ["Missing bolts completed", "Eksik cıvatalar tamamlandı"]]], ["Drip trays / save-alls and drain plugs checked", "Damla tavaları ve drenaj tapaları kontrol edildi", [["Clean, plugs fitted", "Temiz, tapalar takılı"], ["Cleaned, plug renewed", "Temizlendi, tapa yenilendi"]]]]}, "Steel hatch pontoons": {"tr": "Çelik Ambar Kapağı Pontonları", "s": ["VIS", "GASKET", ["Cross joints and compression bars checked", "Çapraz birleşimler ve sıkıştırma çubukları kontrol edildi", [["Satisfactory", "Uygun"], ["Damaged compression bar repaired", "Hasarlı sıkıştırma çubuğu onarıldı"]]], ["Drain channels and lifting points checked", "Drenaj kanalları ve kaldırma noktaları kontrol edildi", [["Clear and in good condition", "Açık ve iyi durumda"], ["Drain channel cleared", "Drenaj kanalı açıldı"]]], "CHALK"]}, "Anchor and Anchor Chain": {"tr": "Demir ve Demir Zinciri (Detaylı)", "s": [["Chain ranged and cleaned (dry dock / anchorage)", "Zincir serildi ve temizlendi (havuz / demir yeri)", [["Ranged and cleaned", "Serildi ve temizlendi"], ["Partially ranged; remainder at next dry dock", "Kısmen serildi; kalanı bir sonraki havuzda"]]], ["Link diameter measured (wear %)", "Bakla çapı ölçüldü (aşınma %)", [["Wear within 12% limit", "Aşınma %12 sınırı içinde"], ["Wear close to limit; recorded for monitoring", "Aşınma sınıra yakın; takip için kaydedildi"], ["Wear beyond limit; shot renewal required", "Aşınma sınırı aşmış; şakıl değişimi gerekli"]]], ["Joining shackles opened, inspected and refitted", "Kenter kilitleri açıldı, incelendi ve yeniden takıldı", [["Satisfactory, new lead pellets fitted", "Uygun, yeni kurşun pimler takıldı"], ["Defective shackle renewed", "Arızalı kilit yenilendi"]]], ["Chain locker and bitter end checked", "Zincirlik ve zincir sonu (bitter end) kontrol edildi", [["Satisfactory, quick release tested", "Uygun, hızlı bırakma test edildi"], ["Mud removed from chain locker", "Zincirlikten çamur temizlendi"]]], "MARK"]}, "Boat Fall": {"tr": "Filika Vinç Teli (Fall)", "s": ["WIRE", ["Fall wire turned end-for-end or renewed (30 months)", "Vinç teli ters çevrildi veya yenilendi (30 ay)", [["Turned end-for-end", "Teli ters çevrildi"], ["Renewed with certified wire", "Sertifikalı tel ile yenilendi"], ["Not yet due; inspection only", "Henüz zamanı gelmedi; sadece muayene"]]], ["Sheaves, end fittings and winch drum checked", "Makaralar, uç bağlantıları ve vinç tamburu kontrol edildi", [["Satisfactory, greased", "Uygun, yağlandı"], ["Seized sheave freed", "Sıkışmış makara serbestlendi"]]], ["Records / certificate updated", "Kayıtlar / sertifika güncellendi", [["Updated", "Güncellendi"]]]]}, "D/O Settling, Daily Service, L/O Storage, Hydraulic oil.": {"tr": "D/O Çökeltme, Günlük Servis, L/O Depo ve Hidrolik Yağ Tankları", "s": ["ENTRY", ["Tank drained of water / sludge", "Tanktaki su / çamur boşaltıldı", [["No water / sludge", "Su / çamur yok"], ["Water / sludge drained", "Su / çamur boşaltıldı"]]], "COAT", ["Level gauges, sounding pipes and self-closing cocks checked", "Seviye göstergeleri, iskandil boruları ve kendinden kapanan muslukları kontrol edildi", [["Satisfactory", "Uygun"], ["Self-closing cock repaired", "Kendinden kapanan musluk onarıldı"]]]]}, "Bottom": {"tr": "Dip (Karina) Muayenesi", "s": [["Hull bottom inspected in dry dock / by divers", "Karina havuzda / dalgıçlarla incelendi", [["Satisfactory", "Uygun"], ["Damage / indent found; recorded with class", "Hasar / ezik bulundu; klas ile kaydedildi"]]], "COAT", ["Sea chests, gratings and anodes checked", "Deniz sandıkları, ızgaralar ve anotlar kontrol edildi", [["Clean, anodes renewed as required", "Temiz, gerekli anotlar yenilendi"], ["Fouling removed", "Kirlenme temizlendi"]]], ["Bottom plugs checked and refitted", "Dip tapaları kontrol edilip yeniden takıldı", [["All plugs refitted and cemented", "Tüm tapalar takıldı ve çimentolandı"]]]]}, "Shell, deck and accomodation spaces": {"tr": "Borda, Güverte ve Yaşam Mahalleri", "s": ["VIS", ["Shell plating checked from deck / boat", "Borda sacı güverteden / bottan kontrol edildi", [["No damage", "Hasar yok"], ["Indent / paint damage recorded", "Ezik / boya hasarı kaydedildi"]]], ["Accommodation decks, stairs and doors checked", "Yaşam mahalli güverteleri, merdivenler ve kapılar kontrol edildi", [["Satisfactory", "Uygun"], ["Minor repairs carried out", "Küçük onarımlar yapıldı"]]], "PAINT"]}, "Portable Gangway": {"tr": "Portatif İskele", "s": ["VIS", ["Rails, stanchions, treads and side ropes checked", "Korkuluklar, dikmeler, basamaklar ve yan halatlar kontrol edildi", [["Satisfactory", "Uygun"], ["Damaged tread / rope renewed", "Hasarlı basamak / halat yenilendi"]]], ["Wheels / rollers and hinges checked and greased", "Tekerlekler / makaralar ve menteşeler kontrol edilip yağlandı", [["Free and greased", "Serbest ve yağlandı"], ["Seized roller freed", "Sıkışmış makara serbestlendi"]]], ["SWL / max angle marking and safety net checked", "SWL / azami açı işareti ve güvenlik ağı kontrol edildi", [["Marked, net in good condition", "İşaretli, ağ iyi durumda"], ["Marking renewed / net replaced", "İşaret yenilendi / ağ değiştirildi"]]], ["Annual load test / thorough examination", "Yıllık yük testi / detaylı muayene", [["Load test carried out and recorded", "Yük testi yapıldı ve kaydedildi"], ["Thorough examination only; load test due at 5 years", "Sadece detaylı muayene; yük testi 5 yılda"]]]]}, "Ballast Tanks": {"tr": "Balast Tankları", "s": ["ENTRY", "COAT", ["Structure checked for cracks, buckling and pitting", "Yapı çatlak, burkulma ve oyuklanma için kontrol edildi", [["No structural defects", "Yapısal hata yok"], ["Defect found; reported to company / class", "Hata bulundu; şirkete / klasa raporlandı"]]], ["Air pipes, sounding pipes and striker plates checked", "Hava boruları, iskandil boruları ve vurma plakaları kontrol edildi", [["Satisfactory", "Uygun"], ["Worn striker plate recorded", "Aşınmış vurma plakası kaydedildi"]]], ["Coating condition recorded in BWT inspection report", "Boya durumu balast tankı muayene raporuna işlendi", [["Recorded", "Kaydedildi"]]]]}, "Mooring Winches": {"tr": "Palamar Vinçleri", "s": ["BRAKE", "LUBE", "GREASE", ["Clutches, drums and warping heads checked", "Kavramalar, tamburlar ve kırlangıçlar kontrol edildi", [["Satisfactory", "Uygun"], ["Clutch freed and greased", "Kavrama serbestlendi ve yağlandı"], ["Drum / head grooved; repair planned", "Tambur / kırlangıç oluklu; onarım planlandı"]]], "OPER"]}, "Mooring Ropes": {"tr": "Palamar Halatları", "s": [["Ropes inspected for wear, cuts, abrasion and UV damage", "Halatlar aşınma, kesik, sürtünme ve UV hasarı için incelendi", [["All ropes in good condition", "Tüm halatlar iyi durumda"], ["Damaged section cut and re-spliced", "Hasarlı bölüm kesildi ve yeniden kasa yapıldı"], ["Rope worn beyond limit; replaced with spare", "Halat sınırın ötesinde aşınmış; yedekle değiştirildi"]]], ["Eye splices and tails checked", "Kasa gözleri ve kuyruk halatları kontrol edildi", [["Satisfactory", "Uygun"], ["Tail renewed", "Kuyruk halatı yenilendi"]]], ["Ropes turned end-for-end / rotated between positions", "Halatlar ters çevrildi / konumlar arasında değiştirildi", [["Not required yet", "Henüz gerekmiyor"], ["Turned end-for-end", "Ters çevrildi"], ["Rotated between fore and aft", "Baş ve kıç arasında değiştirildi"]]], ["Rope records and certificates updated", "Halat kayıtları ve sertifikaları güncellendi", [["Updated", "Güncellendi"]]]]}};
+const JOBS=[{"n": "Air Vents", "p": "1m", "last": "2026-10-23", "cls": true, "psc": true, "permit": true, "ra": false, "tr": "Hava Firarları"}, {"n": "Scuppers", "p": "1m", "last": "2026-10-02", "cls": true, "psc": true, "permit": true, "ra": false, "tr": "Frengiler"}, {"n": "Ventilators & Dampers", "p": "1m", "last": "2026-10-01", "cls": true, "psc": true, "permit": true, "ra": false, "tr": "Vantilatörler ve Damperler"}, {"n": "Portlights", "p": "1m", "last": "2026-10-01", "cls": true, "psc": true, "permit": true, "ra": false, "tr": "Lomboz"}, {"n": "Main Deck Air Valve", "p": "3m", "last": "2026-10-23", "cls": true, "psc": true, "permit": false, "ra": false, "tr": "Ana Güverte Hava Valfi"}, {"n": "Coaming drain channel -  hole -  pipe- valves - fire caps", "p": "1m", "last": "2026-10-24", "cls": false, "psc": false, "permit": false, "ra": false, "tr": "Mezarna Drenaj Kanalı, Delikleri, Boruları, Valfleri ve Kapakları"}, {"n": "General structural ", "p": "1m", "last": "2026-10-24", "cls": true, "psc": false, "permit": false, "ra": false, "tr": "Genel Yapısal Kontrol"}, {"n": "Bilge Wells, Strainers", "p": "1m", "last": "2026-09-24", "cls": true, "psc": true, "permit": true, "ra": false, "tr": "Sintine Kuyuları ve Süzgeçleri"}, {"n": "Gantry Crane", "p": "1m", "last": "2026-10-02", "cls": true, "psc": false, "permit": false, "ra": false, "tr": "Gantri Vinç"}, {"n": "Piping Arrangement", "p": "3m", "last": "2026-10-01", "cls": true, "psc": true, "permit": true, "ra": false, "tr": "Güverte Boru Tesisatı"}, {"n": "Structural Conditon ", "p": "3m", "last": "2026-09-30", "cls": true, "psc": true, "permit": false, "ra": false, "tr": "Yapısal Durum"}, {"n": "Anchor and Anchor Chain Visual Inspection", "p": "3m", "last": "2026-09-24", "cls": true, "psc": false, "permit": true, "ra": false, "tr": "Demir ve Demir Zinciri Gözle Kontrol"}, {"n": "Fairleader", "p": "3m", "last": "2026-10-23", "cls": true, "psc": true, "permit": false, "ra": false, "tr": "Kurt Ağzı / Makaralı Fairlead"}, {"n": "Watertight  and Weathertight Doors", "p": "3m", "last": "2026-10-01", "cls": true, "psc": true, "permit": false, "ra": false, "tr": "Su Geçirmez ve Hava Geçirmez Kapılar"}, {"n": "Small Hatches", "p": "3m", "last": "2026-10-01", "cls": true, "psc": true, "permit": true, "ra": false, "tr": "Küçük Kapaklar (Kaçış ve Giriş Kapakları)"}, {"n": "Bearing pad  surface ", "p": "3m", "last": "2026-10-01", "cls": false, "psc": false, "permit": false, "ra": false, "tr": "Ambar Kapağı Yatak Pedi Yüzeyleri"}, {"n": "Windlass  (Replacement of brake linings)", "p": "3m", "last": "2026-09-23", "cls": true, "psc": true, "permit": false, "ra": false, "tr": "Irgat (Fren Balataları)"}, {"n": "Fresh Water Tanks", "p": "6m", "last": "2026-07-24", "cls": true, "psc": true, "permit": true, "ra": false, "tr": "Tatlı Su Tankları"}, {"n": "Guardrails (Stantions & Rails)", "p": "6m", "last": "2026-07-01", "cls": true, "psc": true, "permit": true, "ra": false, "tr": "Korkuluklar (Dikmeler ve Küpeşteler)"}, {"n": "Hydraulic pressure piping system.", "p": "6m", "last": "2026-07-01", "cls": true, "psc": true, "permit": false, "ra": false, "tr": "Hidrolik Basınç Boru Sistemi"}, {"n": "Pressure Air Piping", "p": "6m", "last": "2026-07-01", "cls": true, "psc": true, "permit": true, "ra": false, "tr": "Basınçlı Hava Boruları"}, {"n": "Main Fire Line", "p": "6m", "last": "2026-07-01", "cls": true, "psc": true, "permit": true, "ra": false, "tr": "Ana Yangın Hattı"}, {"n": "Fixed CO2 Piping", "p": "6m", "last": "2026-07-01", "cls": true, "psc": true, "permit": true, "ra": false, "tr": "Sabit CO2 Boruları"}, {"n": "Diesel-Oil Filling Line", "p": "6m", "last": "2026-07-01", "cls": true, "psc": true, "permit": true, "ra": false, "tr": "Dizel Yakıt Dolum Hattı"}, {"n": "Steel hatch pontoons", "p": "6m", "last": "2026-07-01", "cls": false, "psc": false, "permit": false, "ra": false, "tr": "Çelik Ambar Kapağı Pontonları"}, {"n": "Anchor and Anchor Chain", "p": "30m", "last": "2025-03-31", "cls": true, "psc": true, "permit": false, "ra": false, "tr": "Demir ve Demir Zinciri (Detaylı)"}, {"n": "Boat Fall", "p": "30m", "last": "", "cls": true, "psc": true, "permit": false, "ra": false, "tr": "Filika Vinç Teli (Fall)"}, {"n": "D/O Settling, Daily Service, L/O Storage, Hydraulic oil.", "p": "30m", "last": "", "cls": true, "psc": true, "permit": true, "ra": false, "tr": "D/O Çökeltme, Günlük Servis, L/O Depo ve Hidrolik Yağ Tankları"}, {"n": "Bottom", "p": "36m", "last": "", "cls": true, "psc": false, "permit": true, "ra": false, "tr": "Dip (Karina) Muayenesi"}, {"n": "Shell, deck and accomodation spaces", "p": "1y", "last": "2026-06-22", "cls": true, "psc": false, "permit": true, "ra": false, "tr": "Borda, Güverte ve Yaşam Mahalleri"}, {"n": "Portable Gangway", "p": "1y", "last": "2026-06-08", "cls": true, "psc": true, "permit": false, "ra": false, "tr": "Portatif İskele"}, {"n": "Ballast Tanks", "p": "1y", "last": "2026-05-20", "cls": true, "psc": true, "permit": true, "ra": false, "tr": "Balast Tankları"}, {"n": "Mooring Winches", "p": "3m", "last": "2026-11-03", "cls": false, "psc": false, "permit": false, "ra": false, "tr": "Palamar Vinçleri"}, {"n": "Mooring Ropes", "p": "3m", "last": "2026-10-15", "cls": false, "psc": false, "permit": false, "ra": false, "tr": "Palamar Halatları"}];
+
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist().catch(()=>{})}catch(e){}
+
+const PER={"1w":{d:7,en:"Weekly",tr:"Haftalık"},"1m":{m:1,en:"Monthly",tr:"Aylık"},"3m":{m:3,en:"3-monthly",tr:"3 aylık"},"6m":{m:6,en:"6-monthly",tr:"6 aylık"},"1y":{m:12,en:"Annual",tr:"Yıllık"},"30m":{m:30,en:"30-monthly",tr:"30 aylık"},"36m":{m:36,en:"36-monthly",tr:"36 aylık"},"wn":{en:"When necessary",tr:"Gerektiğinde"}};
+const REASONS=[["Bad weather","Kötü hava"],["Cargo operations in progress","Yük operasyonu devam ediyor"],["Spare parts not available","Yedek parça yok"],["Insufficient time / manpower","Zaman / personel yetersiz"],["Requires shore service / dry dock","Kıyı servisi / havuz gerektiriyor"],["Postponed to next opportunity","Bir sonraki fırsata ertelendi"]];
+
+let S={jobs:{},ship:""};
+try{const raw=store.get("pms_state");if(raw)S=Object.assign(S,JSON.parse(raw))}catch(e){}
+const save=()=>store.set("pms_state",JSON.stringify(S));
+$("ship").value=S.ship||"";
+
+const pad=n=>String(n).padStart(2,"0");
+const iso=d=>d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+const parse=s=>{if(!s)return null;const [y,m,d]=s.split("-").map(Number);return new Date(y,m-1,d)};
+const fmt=s=>{const d=typeof s==="string"?parse(s):s;return d?pad(d.getDate())+"."+pad(d.getMonth()+1)+"."+d.getFullYear():"—"};
+const today=()=>{const d=new Date();return new Date(d.getFullYear(),d.getMonth(),d.getDate())};
+function addPer(dStr,p){const d=parse(dStr),P=PER[p];if(!d||!P||(!P.m&&!P.d))return null;
+  if(P.d){const r=new Date(d);r.setDate(r.getDate()+P.d);return r}
+  const r=new Date(d.getFullYear(),d.getMonth()+P.m,1);const last=new Date(r.getFullYear(),r.getMonth()+1,0).getDate();r.setDate(Math.min(d.getDate(),last));return r}
+const lastOf=j=>(S.jobs[j.n]&&S.jobs[j.n].last!==undefined)?S.jobs[j.n].last:j.last;
+function status(j){const p=PER[j.p]||{};
+  if(j.p==="wn")return{k:"wn",next:null,txt:"Gerektiğinde",cls:""};
+  const last=lastOf(j);if(!last)return{k:"nodate",next:null,txt:"Tarih yok",cls:""};
+  const next=addPer(last,j.p),days=Math.round((next-today())/864e5);
+  const per=p.d||p.m*30,th=per<=7?2:per<=31?7:per<=92?14:30;
+  if(days<0)return{k:"over",next,days,txt:`${-days} gün gecikti`,cls:"over"};
+  if(days<=th)return{k:"soon",next,days,txt:days===0?"Bugün":`${days} gün kaldı`,cls:"soon"};
+  return{k:"ok",next,days,txt:`${days} gün kaldı`,cls:"okk"}}
+
+const FILTERS=[["over","Gecikmiş","over"],["soon","Yaklaşan","soon"],["ok","Zamanında","okk"],["other","Gerektiğinde / tarih yok",""],["all","Tümü",""]];
+let filter=null;
+function renderList(){
+  $("today").textContent="Bugün "+fmt(today())+" · "+JOBS.length+" iş · Sorumlu: Chief Officer";
+  $("eb").textContent=(S.ship?S.ship+" · ":"")+"PMS · Chief Officer";
+  const st=JOBS.map(j=>({j,s:status(j)}));
+  const cnt={over:0,soon:0,ok:0,other:0,all:st.length};st.forEach(x=>{if(x.s.k==="over")cnt.over++;else if(x.s.k==="soon")cnt.soon++;else if(x.s.k==="ok")cnt.ok++;else cnt.other++});
+  if(filter===null)filter=cnt.over||cnt.soon?"due":"all";
+  $("sum").innerHTML=FILTERS.map(([k,l,c])=>`<button class="${c}" data-f="${k}" aria-pressed="${filter===k||(filter==="due"&&(k==="over"||k==="soon"))}"><b>${cnt[k]}</b><span>${l}</span></button>`).join("");
+  const q=$("q").value.trim().toLowerCase();
+  let rows=st.filter(x=>{const f=filter;if(f==="all")return true;if(f==="due")return x.s.k==="over"||x.s.k==="soon";if(f==="other")return x.s.k==="wn"||x.s.k==="nodate";return x.s.k===f});
+  if(q)rows=st.filter(x=>(x.j.n+" "+x.j.tr).toLowerCase().includes(q));
+  const ord={over:0,soon:1,ok:2,nodate:3,wn:4};
+  rows.sort((a,b)=>ord[a.s.k]-ord[b.s.k]||((a.s.next||0)-(b.s.next||0))||a.j.n.localeCompare(b.j.n));
+  $("list").innerHTML=rows.length?rows.map(({j,s})=>`<button class="job ${s.cls}" data-i="${JOBS.indexOf(j)}">
+    <span class="bar"></span>
+    <span class="mid"><span class="nm">${esc(j.n.trim())}</span><span class="tr">${esc(j.tr)}</span>
+      <span class="meta"><span>${PER[j.p]?PER[j.p].tr:j.p}</span><span>Son: ${fmt(lastOf(j))}</span>${s.next?`<span>Sonraki: ${fmt(s.next)}</span>`:""}</span></span>
+    <span class="right"><span class="pill ${s.cls}">${s.txt}</span><span class="tags">${j.permit?'<span class="tag p">İZİN</span>':""}${j.cls?'<span class="tag">CLASS</span>':""}${j.psc?'<span class="tag">PSC</span>':""}</span></span></button>`).join(""):`<div class="empty">Bu filtrede iş yok.</div>`;
+}
+$("sum").onclick=e=>{const b=e.target.closest("[data-f]");if(!b)return;filter=b.dataset.f;$("q").value="";renderList()};
+$("q").oninput=renderList;
+$("list").onclick=e=>{const b=e.target.closest("[data-i]");if(b)openJob(+b.dataset.i)};
+
+/* ---------- detail ---------- */
+let cur=null,sel=[];
+function stepsOf(j){const arr=[];const t=JOBS_TXT[j.n];
+  const hasEntry=t.s.includes("ENTRY");if(j.permit&&!hasEntry)arr.push(L.PERMIT);
+  t.s.forEach(s=>arr.push(typeof s==="string"?L[s]:s));return arr}
+function openJob(i){cur=JOBS[i];const steps=stepsOf(cur);sel=steps.map(()=>({st:"d",r:0,why:0}));
+  $("listView").hidden=true;$("detail").hidden=false;window.scrollTo(0,0);
+  try{history.pushState({d:1},"")}catch(e){}
+  renderDetail()}
+function closeJob(){cur=null;$("detail").hidden=true;$("listView").hidden=false;renderList()}
+window.addEventListener("popstate",()=>{if(cur)closeJob()});
+function renderDetail(){const j=cur,s=status(j),steps=stepsOf(j),h=(S.jobs[j.n]&&S.jobs[j.n].hist)||[];
+  const doneDate=$("dDate")?$("dDate").value:iso(today()), rem=$("rem")?$("rem").value:"";
+  $("dwrap").innerHTML=`
+  <div class="top"><button class="back" id="back" type="button">‹ Liste</button><span class="pill ${s.cls}">${s.txt}</span></div>
+  <div class="dh"><div class="eyebrow">${PER[j.p]?PER[j.p].en+" · "+PER[j.p].tr:j.p} · C/O</div><h2>${esc(j.n.trim())}<span>${esc(j.tr)}</span></h2></div>
+  <svg class="waves" viewBox="0 0 400 22" preserveAspectRatio="none" aria-hidden="true"><path d="M0 9 C60 2 120 2 180 8 C240 14 300 14 400 6" fill="none" stroke="#F28C28" stroke-width="3.2" stroke-linecap="round"/><path d="M0 18 C70 12 130 12 190 16 C250 20 320 20 400 14" fill="none" stroke="#F28C28" stroke-width="3.2" stroke-linecap="round"/></svg>
+  <div class="facts"><div><small>Periyot</small><b>${PER[j.p]?PER[j.p].tr:j.p}</b></div><div><small>Son yapılma</small><b>${fmt(lastOf(j))}</b></div><div><small>Sonraki</small><b>${s.next?fmt(s.next):"—"}</b></div><div><small>Sorumlu</small><b>Chief Officer</b></div></div>
+  <div class="row2"><label class="lbl">Yapıldığı tarih<input type="date" id="dDate" value="${doneDate}"></label><label class="lbl">Son yapılma tarihini düzelt<input type="date" id="fixLast" value="${lastOf(j)||""}"></label></div>
+  ${j.permit?'<p class="note">Bu iş için çalışma izni gerekiyor (Excel: Permit).</p>':""}
+  <div class="sec">Yapılacak işler · her adım için durumu seç</div>
+  <div class="steps">${steps.map((st,k)=>{const v=sel[k];return `<div class="step ${v.st==="n"?"nd":v.st==="x"?"na":""}">
+    <div class="t">${esc(st[0])}<span>${esc(st[1])}</span></div>
+    <div class="seg" role="group"><button class="d" data-k="${k}" data-st="d" aria-pressed="${v.st==="d"}">Yapıldı</button><button class="n" data-k="${k}" data-st="n" aria-pressed="${v.st==="n"}">Yapılmadı</button><button class="x" data-k="${k}" data-st="x" aria-pressed="${v.st==="x"}">Uygulanmaz</button></div>
+    ${v.st==="d"?`<select data-r="${k}" aria-label="Sonuç">${st[2].map((r,ri)=>`<option value="${ri}"${ri===v.r?" selected":""}>${esc(r[1])} · ${esc(r[0])}</option>`).join("")}</select>`:""}
+    ${v.st==="n"?`<select data-w="${k}" aria-label="Neden">${REASONS.map((r,ri)=>`<option value="${ri}"${ri===v.why?" selected":""}>${esc(r[1])} · ${esc(r[0])}</option>`).join("")}</select>`:""}
+  </div>`}).join("")}</div>
+  <label class="lbl">Ek not (raporun sonuna eklenir)<textarea id="rem" placeholder="Örn: 2 adet conta kullanıldı.">${esc(rem)}</textarea></label>
+  <div class="sec">Rapor önizleme</div>
+  <pre class="report" id="rep"></pre>
+  ${h.length?`<div class="sec">Geçmiş</div><div class="hist">${h.slice(0,6).map(x=>`<div><b>${fmt(x.d)}</b> · ${esc(x.s)}</div>`).join("")}</div>`:""}`;
+  $("rep").textContent=buildText("both");
+  $("back").onclick=()=>{try{history.back()}catch(e){closeJob()}setTimeout(()=>{if(cur)closeJob()},300)};
+}
+$("dwrap").addEventListener("click",e=>{const b=e.target.closest("[data-st]");if(!b)return;const k=+b.dataset.k;sel[k].st=b.dataset.st;renderDetail()});
+$("dwrap").addEventListener("change",e=>{const t=e.target;
+  if(t.dataset.r!==undefined){sel[+t.dataset.r].r=+t.value}
+  else if(t.dataset.w!==undefined){sel[+t.dataset.w].why=+t.value}
+  else if(t.id==="fixLast"){(S.jobs[cur.n]=S.jobs[cur.n]||{}).last=t.value||"";save();toast("Son yapılma tarihi düzeltildi");renderDetail();return}
+  $("rep").textContent=buildText("both")});
+$("dwrap").addEventListener("input",e=>{if(e.target.id==="rem"||e.target.id==="dDate")$("rep").textContent=buildText("both")});
+
+function buildText(lang){const j=cur,steps=stepsOf(j),d=$("dDate")?$("dDate").value:iso(today()),rem=$("rem")?$("rem").value.trim():"";
+  const P=PER[j.p]||{en:j.p,tr:j.p},nx=addPer(d,j.p);
+  const block=(L2)=>{const E=L2==="en",o=[];
+    const done=[],nd=[];steps.forEach((st,k)=>{const v=sel[k];if(v.st==="d")done.push(`- ${E?st[0]:st[1]}: ${E?st[2][v.r][0]:st[2][v.r][1]}`);else if(v.st==="n")nd.push(`- ${E?st[0]:st[1]}: ${E?"not done – "+REASONS[v.why][0]:"yapılmadı – "+REASONS[v.why][1]}`)});
+    o.push(`${E?j.n.trim():j.tr} – ${E?P.en+" maintenance":P.tr+" bakım"}`);
+    o.push(`${E?"Date":"Tarih"}: ${fmt(d)}   ${E?"Responsible":"Sorumlu"}: ${E?"Chief Officer":"2. Kaptan (C/O)"}${S.ship?`   ${E?"Vessel":"Gemi"}: ${S.ship}`:""}`);
+    if(done.length){o.push(E?"Work carried out:":"Yapılan işler:");o.push(...done)}
+    if(nd.length){o.push(E?"Not carried out:":"Yapılamayan işler:");o.push(...nd)}
+    if(!done.length&&!nd.length)o.push(E?"No applicable items.":"Uygulanabilir iş yok.");
+    if(rem)o.push((E?"Remarks: ":"Not: ")+rem);
+    if(nx)o.push(`${E?"Next due":"Sonraki bakım"}: ${fmt(nx)}`);
+    return o.join("\n")};
+  if(lang==="en")return block("en");if(lang==="tr")return block("tr");return block("en")+"\n\n"+block("tr")}
+
+let tT;function toast(m){const t=$("toast");t.textContent=m;t.hidden=false;clearTimeout(tT);tT=setTimeout(()=>t.hidden=true,2000)}
+function copyText(txt,label){const fb=()=>{const f=$("fallback");f.hidden=false;f.value=txt;f.focus();f.select();toast("Metin seçildi, kopyala tuşuna bas")};
+  try{navigator.clipboard.writeText(txt).then(()=>{$("fallback").hidden=true;toast("Kopyalandı: "+label)},fb)}catch(e){fb()}}
+$("cpBoth").onclick=()=>copyText(buildText("both"),"EN+TR");
+$("cpEn").onclick=()=>copyText(buildText("en"),"EN");
+$("cpTr").onclick=()=>copyText(buildText("tr"),"TR");
+$("saveDone").onclick=()=>{if(!cur)return;const d=$("dDate").value;if(!d){toast("Önce yapıldığı tarihi seç");return}
+  const steps=stepsOf(cur),nd=sel.filter(v=>v.st==="n").length,dn=sel.filter(v=>v.st==="d").length;
+  const rec=S.jobs[cur.n]=S.jobs[cur.n]||{};rec.hist=rec.hist||[];
+  if(dn===0){rec.hist.unshift({d,s:`Yapılmadı (${nd} adım)`});rec.hist=rec.hist.slice(0,20);save();toast("Yapılmadı olarak not edildi, tarih değişmedi");renderDetail();return}
+  rec.last=d;rec.hist.unshift({d,s:nd?`Kısmen yapıldı: ${dn} yapıldı, ${nd} yapılmadı`:`Tamamlandı (${dn} adım)`});rec.hist=rec.hist.slice(0,20);save();
+  toast("Kaydedildi. Sonraki: "+(addPer(d,cur.p)?fmt(addPer(d,cur.p)):"—"));renderDetail()};
+
+/* ---------- settings ---------- */
+$("ship").oninput=e=>{S.ship=e.target.value.trim();save();renderList()};
+$("bkCopy").onclick=()=>{const code=btoa(unescape(encodeURIComponent(JSON.stringify(S))));copyText(code,"yedek kodu")};
+$("bkLoad").onclick=()=>{try{const o=JSON.parse(decodeURIComponent(escape(atob($("bkIn").value.trim()))));if(!o||typeof o.jobs!=="object")throw 0;S=Object.assign({jobs:{},ship:""},o);save();$("ship").value=S.ship||"";$("bkIn").value="";renderList();toast("Yedek geri yüklendi")}catch(e){toast("Kod okunamadı, tamamını yapıştır")}};
+let resetArm=false;$("reset").onclick=()=>{if(!resetArm){resetArm=true;$("reset").textContent="Emin misin? Tekrar bas";setTimeout(()=>{resetArm=false;$("reset").textContent="Excel tarihlerine dön"},4000);return}
+  Object.values(S.jobs).forEach(r=>{delete r.last});save();resetArm=false;$("reset").textContent="Excel tarihlerine dön";renderList();toast("Excel tarihlerine dönüldü (geçmiş korundu)")};
+renderList();
+</script>
+
+<script>if("serviceWorker" in navigator){addEventListener("load",()=>navigator.serviceWorker.register("sw.js").then(r=>r.update()).catch(()=>{}))}</script>
+</body>
+</html>
