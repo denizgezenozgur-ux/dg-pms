@@ -199,6 +199,8 @@ function addPer(dStr,p){const d=parse(dStr),P=PER[p];if(!d||!P||(!P.m&&!P.d))ret
 const lastOf=j=>(S.jobs[j.k]&&S.jobs[j.k].last!==undefined)?S.jobs[j.k].last:j.last;
 const RESP={"C/O":["Chief Officer","2. Kaptan (C/O)"],"2/O":["2nd Officer","2. Zabit"],"C/E":["Chief Engineer","Başmühendis"],"SO":["Safety Officer","Emniyet Zabiti"],"GMDSS":["GMDSS Officer","GMDSS Zabiti"],"":["Not assigned","Atanmamış"]};
 const RCHIPS=[["all","Hepsi"],["C/O","C/O"],["2/O","2/O"],["C/E","C/E"],["SO","Safety Off."],["GMDSS","GMDSS Off."],["","Atanmamış"]];
+const rOf=j=>{const x=S.jobs[j.k];return x&&typeof x.r==="string"?x.r:j.r};
+const RNAME={"C/O":"C/O","2/O":"2/O","C/E":"C/E","SO":"Safety Off.","GMDSS":"GMDSS Off.","":"—"};
 let resp="all";try{const r=store.get("pms_resp");if(r!==null&&RCHIPS.some(x=>x[0]===r))resp=r}catch(e){}
 function status(j){const p=PER[j.p]||{};
   if(j.p==="wn")return{k:"wn",next:null,txt:"Gerektiğinde",cls:""};
@@ -212,23 +214,23 @@ function status(j){const p=PER[j.p]||{};
 const FILTERS=[["over","Gecikmiş","over"],["soon","Yaklaşan","soon"],["ok","Zamanında","okk"],["other","Gerektiğinde / tarih yok",""],["all","Tümü",""]];
 let filter=null;
 function renderList(){
-  const pool=JOBS.filter(j=>resp==="all"||j.r===resp);
+  const pool=JOBS.filter(j=>resp==="all"||rOf(j)===resp);
   $("today").textContent="Bugün "+fmt(today())+" · "+pool.length+" iş · Sorumlu: "+(resp==="all"?"hepsi":RESP[resp][1]);
   $("eb").textContent=(S.ship?S.ship+" · ":"")+"DG PMS";
-  $("rchips").innerHTML=RCHIPS.map(([k,l])=>`<button type="button" data-r="${k}" aria-pressed="${resp===k}">${l}<small>${k==="all"?JOBS.length:JOBS.filter(j=>j.r===k).length}</small></button>`).join("");
+  $("rchips").innerHTML=RCHIPS.map(([k,l])=>`<button type="button" data-r="${k}" aria-pressed="${resp===k}">${l}<small>${k==="all"?JOBS.length:JOBS.filter(j=>rOf(j)===k).length}</small></button>`).join("");
   const st=pool.map(j=>({j,s:status(j)}));
   const cnt={over:0,soon:0,ok:0,other:0,all:st.length};st.forEach(x=>{if(x.s.k==="over")cnt.over++;else if(x.s.k==="soon")cnt.soon++;else if(x.s.k==="ok")cnt.ok++;else cnt.other++});
   if(filter===null)filter=cnt.over||cnt.soon?"due":"all";
   $("sum").innerHTML=FILTERS.map(([k,l,c])=>`<button class="${c}" data-f="${k}" aria-pressed="${filter===k||(filter==="due"&&(k==="over"||k==="soon"))}"><b>${cnt[k]}</b><span>${l}</span></button>`).join("");
   const q=$("q").value.trim().toLowerCase();
   let rows=st.filter(x=>{const f=filter;if(f==="all")return true;if(f==="due")return x.s.k==="over"||x.s.k==="soon";if(f==="other")return x.s.k==="wn"||x.s.k==="nodate";return x.s.k===f});
-  if(q)rows=st.filter(x=>(x.j.n+" "+x.j.tr+" "+RESP[x.j.r][0]).toLowerCase().includes(q));
+  if(q)rows=st.filter(x=>(x.j.n+" "+x.j.tr+" "+RESP[rOf(x.j)][0]+" "+RESP[rOf(x.j)][1]).toLowerCase().includes(q));
   const ord={over:0,soon:1,ok:2,nodate:3,wn:4};
   rows.sort((a,b)=>ord[a.s.k]-ord[b.s.k]||((a.s.next||0)-(b.s.next||0))||a.j.n.localeCompare(b.j.n));
   $("list").innerHTML=rows.length?rows.map(({j,s})=>`<button class="job ${s.cls}" data-i="${JOBS.indexOf(j)}">
     <span class="bar"></span>
     <span class="mid"><span class="nm">${esc(j.n.trim())}</span><span class="tr">${esc(j.tr)}</span>
-      <span class="meta"><span>${PER[j.p]?PER[j.p].tr:j.p}</span><span>${j.r||"—"}</span><span>Son: ${fmt(lastOf(j))}</span>${s.next?`<span>Sonraki: ${fmt(s.next)}</span>`:""}</span></span>
+      <span class="meta"><span>${PER[j.p]?PER[j.p].tr:j.p}</span><span>${RNAME[rOf(j)]}</span><span>Son: ${fmt(lastOf(j))}</span>${s.next?`<span>Sonraki: ${fmt(s.next)}</span>`:""}</span></span>
     <span class="right"><span class="pill ${s.cls}">${s.txt}</span><span class="tags">${j.permit?'<span class="tag p">İZİN</span>':""}${j.cls?'<span class="tag">CLASS</span>':""}${j.psc?'<span class="tag">PSC</span>':""}</span></span></button>`).join(""):`<div class="empty">Bu filtrede iş yok.</div>`;
 }
 $("rchips").onclick=e=>{const b=e.target.closest("[data-r]");if(!b)return;resp=b.dataset.r;store.set("pms_resp",resp);filter=null;renderList()};
@@ -251,9 +253,10 @@ function renderDetail(){const j=cur,s=status(j),steps=stepsOf(j),h=(S.jobs[j.k]&
   const doneDate=$("dDate")?$("dDate").value:iso(today()), rem=$("rem")?$("rem").value:"";
   $("dwrap").innerHTML=`
   <div class="top"><button class="back" id="back" type="button">‹ Liste</button><span class="pill ${s.cls}">${s.txt}</span></div>
-  <div class="dh"><div class="eyebrow">${PER[j.p]?PER[j.p].en+" · "+PER[j.p].tr:j.p} · ${j.r||"—"}</div><h2>${esc(j.n.trim())}<span>${esc(j.tr)}</span></h2></div>
+  <div class="dh"><div class="eyebrow">${PER[j.p]?PER[j.p].en+" · "+PER[j.p].tr:j.p} · ${RNAME[rOf(j)]}</div><h2>${esc(j.n.trim())}<span>${esc(j.tr)}</span></h2></div>
   <svg class="waves" viewBox="0 0 400 22" preserveAspectRatio="none" aria-hidden="true"><path d="M0 9 C60 2 120 2 180 8 C240 14 300 14 400 6" fill="none" stroke="#F28C28" stroke-width="3.2" stroke-linecap="round"/><path d="M0 18 C70 12 130 12 190 16 C250 20 320 20 400 14" fill="none" stroke="#F28C28" stroke-width="3.2" stroke-linecap="round"/></svg>
-  <div class="facts"><div><small>Periyot</small><b>${PER[j.p]?PER[j.p].tr:j.p}</b></div><div><small>Son yapılma</small><b>${fmt(lastOf(j))}</b></div><div><small>Sonraki</small><b>${s.next?fmt(s.next):"—"}</b></div><div><small>Sorumlu</small><b>${RESP[j.r][1]}</b></div></div>
+  <div class="facts"><div><small>Periyot</small><b>${PER[j.p]?PER[j.p].tr:j.p}</b></div><div><small>Son yapılma</small><b>${fmt(lastOf(j))}</b></div><div><small>Sonraki</small><b>${s.next?fmt(s.next):"—"}</b></div><div><small>Sorumlu</small><b>${RESP[rOf(j)][1]}</b></div></div>
+  <label class="lbl">Sorumlu ata<select id="setResp">${Object.keys(RESP).map(k=>`<option value="${k}"${rOf(j)===k?" selected":""}>${RESP[k][1]} · ${RESP[k][0]}</option>`).join("")}</select></label>${rOf(j)!==j.r?`<p class="note">Excel'de: ${RESP[j.r][1]} · elle değiştirildi</p>`:""}
   <div class="row2"><label class="lbl">Yapıldığı tarih<input type="date" id="dDate" value="${doneDate}"></label><label class="lbl">Son yapılma tarihini düzelt<input type="date" id="fixLast" value="${lastOf(j)||""}"></label></div>
   ${j.permit?'<p class="note">Bu iş için çalışma izni gerekiyor (Excel: Permit).</p>':""}
   <div class="sec">Yapılacak işler · her adım için durumu seç</div>
@@ -274,6 +277,7 @@ $("dwrap").addEventListener("click",e=>{const b=e.target.closest("[data-st]");if
 $("dwrap").addEventListener("change",e=>{const t=e.target;
   if(t.dataset.r!==undefined){sel[+t.dataset.r].r=+t.value}
   else if(t.dataset.w!==undefined){sel[+t.dataset.w].why=+t.value}
+  else if(t.id==="setResp"){const rr=(S.jobs[cur.k]=S.jobs[cur.k]||{});rr.r=t.value;rr.u=Date.now();save();toast("Sorumlu: "+RESP[t.value][1]);renderDetail();return}
   else if(t.id==="fixLast"){const rr=(S.jobs[cur.k]=S.jobs[cur.k]||{});rr.last=t.value||"";rr.u=Date.now();save();toast("Son yapılma tarihi düzeltildi");renderDetail();return}
   $("rep").textContent=buildText("both")});
 $("dwrap").addEventListener("input",e=>{if(e.target.id==="rem"||e.target.id==="dDate")$("rep").textContent=buildText("both")});
@@ -283,7 +287,7 @@ function buildText(lang){const j=cur,steps=stepsOf(j),d=$("dDate")?$("dDate").va
   const block=(L2)=>{const E=L2==="en",o=[];
     const done=[],nd=[];steps.forEach((st,k)=>{const v=sel[k];if(v.st==="d")done.push(`- ${E?st[0]:st[1]}: ${E?st[2][v.r][0]:st[2][v.r][1]}`);else if(v.st==="n")nd.push(`- ${E?st[0]:st[1]}: ${E?"not done – "+REASONS[v.why][0]:"yapılmadı – "+REASONS[v.why][1]}`)});
     o.push(`${E?j.n.trim():j.tr} – ${E?P.en+" maintenance":P.tr+" bakım"}`);
-    o.push(`${E?"Date":"Tarih"}: ${fmt(d)}   ${E?"Responsible":"Sorumlu"}: ${RESP[j.r][E?0:1]}${S.ship?`   ${E?"Vessel":"Gemi"}: ${S.ship}`:""}`);
+    o.push(`${E?"Date":"Tarih"}: ${fmt(d)}   ${E?"Responsible":"Sorumlu"}: ${RESP[rOf(j)][E?0:1]}${S.ship?`   ${E?"Vessel":"Gemi"}: ${S.ship}`:""}`);
     if(done.length){o.push(E?"Work carried out:":"Yapılan işler:");o.push(...done)}
     if(nd.length){o.push(E?"Not carried out:":"Yapılamayan işler:");o.push(...nd)}
     if(!done.length&&!nd.length)o.push(E?"No applicable items.":"Uygulanabilir iş yok.");
