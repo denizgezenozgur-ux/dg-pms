@@ -1,0 +1,2 @@
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'sha256-LbEtSR5S2YnrvzKaZW+CeUN4L9shX1UN/AUC9nTDro0=' 'sha256-WdnV/JIknAko0TZQeZAsrjtE5hyMKiIdFz1YUIKJCwg='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'
