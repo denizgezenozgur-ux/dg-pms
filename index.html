@@ -105,6 +105,9 @@ textarea{min-height:64px;resize:vertical}
 .copybar .save{background:var(--orange);color:var(--navy)}
 #detail .wrap{padding-bottom:110px}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(80px + env(safe-area-inset-bottom,0px));background:var(--orange);color:var(--navy);font-weight:600;padding:8px 16px;border-radius:999px;font-size:14px;z-index:6;max-width:90vw;text-align:center}
+.cloud{display:flex;flex-direction:column;gap:8px;padding-bottom:12px;border-bottom:1px solid var(--line)}
+.ctitle{font-weight:600}
+#cloudLine{margin-top:-10px}
 details.set{background:var(--surface);border:0;border-radius:8px;padding:12px}
 details.set summary{cursor:pointer;font-weight:600}
 details.set[open] summary{margin-bottom:10px}
@@ -123,12 +126,27 @@ details.set .note{color:var(--muted)}
   </header>
   <svg class="waves" viewBox="0 0 400 22" preserveAspectRatio="none" aria-hidden="true"><path d="M0 9 C60 2 120 2 180 8 C240 14 300 14 400 6" fill="none" stroke="#F28C28" stroke-width="3.2" stroke-linecap="round"/><path d="M0 18 C70 12 130 12 190 16 C250 20 320 20 400 14" fill="none" stroke="#F28C28" stroke-width="3.2" stroke-linecap="round"/></svg>
   <p class="sub" id="today"></p>
+  <p class="sub" id="cloudLine"></p>
   <div class="sum" id="sum"></div>
   <input type="search" id="q" placeholder="İş ara: anchor, ballast, hatch…" aria-label="İş ara">
   <div class="list" id="list"></div>
   <details class="set" id="set">
     <summary>Ayarlar ve yedek</summary>
     <div class="setin">
+      <div class="cloud">
+        <div class="ctitle">Bulut eşitleme</div>
+        <div id="cOff">
+          <p class="note">SOF Defteri'ndeki kaptan hesabınla gir. Kayıtların telefonda ve bilgisayarda aynı olur. İnternet yokken uygulama yine çalışır, internet gelince eşitler.</p>
+          <label class="lbl">E-posta veya kullanıcı adı<input id="cEm" type="email" autocomplete="username" placeholder="ornek@gmail.com"></label>
+          <label class="lbl">Şifre<input id="cPw" type="password" autocomplete="current-password"></label>
+          <div class="btnrow"><button class="btn o" id="cIn" type="button">Giriş yap</button></div>
+        </div>
+        <div id="cOn" hidden>
+          <p class="note"><b>Bağlı:</b> <span id="cWho"></span></p>
+          <div class="btnrow"><button class="btn g" id="cSync" type="button">Şimdi eşitle</button><button class="btn g" id="cOut" type="button">Çıkış yap</button></div>
+        </div>
+        <p class="note" id="cMsg"></p>
+      </div>
       <label class="lbl">Gemi adı (raporda görünür)<input id="ship" placeholder="M/V ..."></label>
       <p class="note">Tarihler bu telefonda saklanır. Ara sıra yedek kodunu al ve kendine mesaj at.</p>
       <div class="btnrow"><button class="btn g" id="bkCopy" type="button">Yedek kodunu kopyala</button></div>
@@ -249,7 +267,7 @@ const REASONS=[["Bad weather","Kötü hava"],["Cargo operations in progress","Y�
 
 let S={jobs:{},ship:""};
 try{const raw=store.get("pms_state");if(raw)S=Object.assign(S,JSON.parse(raw))}catch(e){}
-const save=()=>store.set("pms_state",JSON.stringify(S));
+const save=()=>{store.set("pms_state",JSON.stringify(S));schedulePush()};
 $("ship").value=S.ship||"";
 
 const pad=n=>String(n).padStart(2,"0");
@@ -332,7 +350,7 @@ $("dwrap").addEventListener("click",e=>{const b=e.target.closest("[data-st]");if
 $("dwrap").addEventListener("change",e=>{const t=e.target;
   if(t.dataset.r!==undefined){sel[+t.dataset.r].r=+t.value}
   else if(t.dataset.w!==undefined){sel[+t.dataset.w].why=+t.value}
-  else if(t.id==="fixLast"){(S.jobs[cur.n]=S.jobs[cur.n]||{}).last=t.value||"";save();toast("Son yapılma tarihi düzeltildi");renderDetail();return}
+  else if(t.id==="fixLast"){const rr=(S.jobs[cur.n]=S.jobs[cur.n]||{});rr.last=t.value||"";rr.u=Date.now();save();toast("Son yapılma tarihi düzeltildi");renderDetail();return}
   $("rep").textContent=buildText("both")});
 $("dwrap").addEventListener("input",e=>{if(e.target.id==="rem"||e.target.id==="dDate")$("rep").textContent=buildText("both")});
 
@@ -359,16 +377,61 @@ $("cpTr").onclick=()=>copyText(buildText("tr"),"TR");
 $("saveDone").onclick=()=>{if(!cur)return;const d=$("dDate").value;if(!d){toast("Önce yapıldığı tarihi seç");return}
   const steps=stepsOf(cur),nd=sel.filter(v=>v.st==="n").length,dn=sel.filter(v=>v.st==="d").length;
   const rec=S.jobs[cur.n]=S.jobs[cur.n]||{};rec.hist=rec.hist||[];
+  rec.u=Date.now();
   if(dn===0){rec.hist.unshift({d,s:`Yapılmadı (${nd} adım)`});rec.hist=rec.hist.slice(0,20);save();toast("Yapılmadı olarak not edildi, tarih değişmedi");renderDetail();return}
   rec.last=d;rec.hist.unshift({d,s:nd?`Kısmen yapıldı: ${dn} yapıldı, ${nd} yapılmadı`:`Tamamlandı (${dn} adım)`});rec.hist=rec.hist.slice(0,20);save();
   toast("Kaydedildi. Sonraki: "+(addPer(d,cur.p)?fmt(addPer(d,cur.p)):"—"));renderDetail()};
 
 /* ---------- settings ---------- */
-$("ship").oninput=e=>{S.ship=e.target.value.trim();save();renderList()};
+$("ship").oninput=e=>{S.ship=e.target.value.trim();S.shipU=Date.now();save();renderList()};
 $("bkCopy").onclick=()=>{const code=btoa(unescape(encodeURIComponent(JSON.stringify(S))));copyText(code,"yedek kodu")};
-$("bkLoad").onclick=()=>{try{const o=JSON.parse(decodeURIComponent(escape(atob($("bkIn").value.trim()))));if(!o||typeof o.jobs!=="object")throw 0;S=Object.assign({jobs:{},ship:""},o);save();$("ship").value=S.ship||"";$("bkIn").value="";renderList();toast("Yedek geri yüklendi")}catch(e){toast("Kod okunamadı, tamamını yapıştır")}};
+$("bkLoad").onclick=()=>{try{const o=JSON.parse(decodeURIComponent(escape(atob($("bkIn").value.trim()))));if(!o||typeof o.jobs!=="object")throw 0;S=Object.assign({jobs:{},ship:""},o);const nw=Date.now();Object.values(S.jobs).forEach(r=>r.u=nw);S.shipU=nw;save();$("ship").value=S.ship||"";$("bkIn").value="";renderList();toast("Yedek geri yüklendi")}catch(e){toast("Kod okunamadı, tamamını yapıştır")}};
 let resetArm=false;$("reset").onclick=()=>{if(!resetArm){resetArm=true;$("reset").textContent="Emin misin? Tekrar bas";setTimeout(()=>{resetArm=false;$("reset").textContent="Excel tarihlerine dön"},4000);return}
-  Object.values(S.jobs).forEach(r=>{delete r.last});save();resetArm=false;$("reset").textContent="Excel tarihlerine dön";renderList();toast("Excel tarihlerine dönüldü (geçmiş korundu)")};
+  Object.values(S.jobs).forEach(r=>{delete r.last;r.u=Date.now()});save();resetArm=false;$("reset").textContent="Excel tarihlerine dön";renderList();toast("Excel tarihlerine dönüldü (geçmiş korundu)")};
+/* ---------- cloud sync: same Firebase project as SOF, but PMS data lives only in pms/{uid}; separate auth session ("dgpms") ---------- */
+const FBCONF={apiKey:"AIzaSyDjEAejLZVS3DJsKX_5Ty8fHu028r4LlYY",authDomain:"dg-sof.firebaseapp.com",projectId:"dg-sof",storageBucket:"dg-sof.firebasestorage.app",messagingSenderId:"129989605648",appId:"1:129989605648:web:491792601b187514f00d95"};
+const FBV="https://www.gstatic.com/firebasejs/11.0.2/";
+const FSDOC=uid=>"https://firestore.googleapis.com/v1/projects/dg-sof/databases/(default)/documents/pms/"+uid;
+let FBA=null,CU=null,pushT=null,syncing=false,again=false;
+const canon=o=>JSON.stringify(o,(k,v)=>v&&typeof v==="object"&&!Array.isArray(v)?Object.keys(v).sort().reduce((r,x)=>(r[x]=v[x],r),{}):v);
+function cMsg(m){$("cMsg").textContent=m||"";$("cloudLine").textContent=CU?"☁ "+(m||"Bulut bağlı"):"☁ Bulut bağlı değil · Ayarlar'dan giriş yap"}
+function cUI(){$("cOff").hidden=!!CU;$("cOn").hidden=!CU;$("cWho").textContent=CU?CU.email:"";cMsg($("cMsg").textContent)}
+async function fbInit(){if(FBA)return FBA;
+  const [a,au]=await Promise.all([import(FBV+"firebase-app.js"),import(FBV+"firebase-auth.js")]);
+  const app=a.getApps().find(x=>x.name==="dgpms")||a.initializeApp(FBCONF,"dgpms");
+  const auth=au.getAuth(app);FBA={au,auth};
+  au.onAuthStateChanged(auth,u=>{CU=u||null;store.set("pms_cloud",u?"1":"0");cUI();if(u)syncNow()});
+  return FBA}
+async function pull(){const t=await CU.getIdToken();const r=await fetch(FSDOC(CU.uid),{headers:{Authorization:"Bearer "+t},cache:"no-store"});
+  if(r.status===404)return null;if(r.status===403||r.status===401)throw new Error("perm");if(!r.ok)throw new Error("http");
+  const d=await r.json();try{return JSON.parse(d.fields.data.stringValue)}catch(e){return null}}
+async function push(){const t=await CU.getIdToken();
+  const r=await fetch(FSDOC(CU.uid),{method:"PATCH",cache:"no-store",headers:{Authorization:"Bearer "+t,"Content-Type":"application/json"},body:JSON.stringify({fields:{data:{stringValue:JSON.stringify(S)},u:{integerValue:String(Date.now())}}})});
+  if(r.status===403||r.status===401)throw new Error("perm");if(!r.ok)throw new Error("http")}
+function merge(a,b){const out={jobs:{},ship:a.ship||"",shipU:a.shipU||0};
+  if((b.shipU||0)>(a.shipU||0)){out.ship=b.ship||"";out.shipU=b.shipU}
+  new Set([...Object.keys(a.jobs||{}),...Object.keys(b.jobs||{})]).forEach(n=>{const x=(a.jobs||{})[n],y=(b.jobs||{})[n];out.jobs[n]=!x?y:!y?x:((y.u||0)>(x.u||0)?y:x)});
+  return out}
+async function syncNow(){if(!CU)return;if(syncing){again=true;return}
+  if(!navigator.onLine){cMsg("İnternet yok · kayıtlar bu cihazda, internet gelince eşitlenecek");return}
+  syncing=true;cMsg("Eşitleniyor…");
+  try{const remote=await pull();const merged=remote?merge(S,remote):S;
+    if(canon(merged)!==canon(S)){S=merged;store.set("pms_state",JSON.stringify(S));$("ship").value=S.ship||"";renderList();if(cur)renderDetail()}
+    if(!remote||canon(merged)!==canon(remote))await push();
+    const d=new Date();cMsg("Eşitlendi "+pad(d.getHours())+":"+pad(d.getMinutes()))}
+  catch(e){cMsg(e.message==="perm"?"Bulut izni yok: Firebase kurallarına PMS bloğu eklenmeli":"Eşitlenemedi, internet gelince tekrar denenecek")}
+  syncing=false;if(again){again=false;syncNow()}}
+function schedulePush(){if(!CU)return;clearTimeout(pushT);pushT=setTimeout(syncNow,1500)}
+const toEmail=u=>{u=String(u||"").trim();return u.includes("@")?u:u.toLowerCase().replace(/\s+/g,"")+"@dg-sof.app"};
+$("cIn").onclick=async()=>{const em=toEmail($("cEm").value),pw=$("cPw").value;if(!em||!pw){cMsg("E-posta ve şifreyi gir");return}
+  cMsg("Giriş yapılıyor…");try{const {au,auth}=await fbInit();await au.signInWithEmailAndPassword(auth,em,pw);$("cPw").value=""}
+  catch(e){const c=(e&&e.code)||"";cMsg(/invalid-credential|wrong-password|user-not-found|invalid-email/.test(c)?"E-posta veya şifre yanlış":/network|Failed to fetch|import/i.test(c+" "+(e&&e.message))?"İnternet bağlantısı gerekli":"Giriş yapılamadı: "+(c||e.message))}};
+$("cOut").onclick=async()=>{try{const {au,auth}=await fbInit();await au.signOut(auth)}catch(e){}CU=null;cUI();cMsg("Çıkış yapıldı. Kayıtlar bu cihazda kalır.")};
+$("cSync").onclick=()=>syncNow();
+addEventListener("online",()=>syncNow());
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")syncNow()});
+if(store.get("pms_cloud")==="1")fbInit().catch(()=>cMsg("İnternet yok · kayıtlar bu cihazda"));
+cUI();
 renderList();
 </script>
 
