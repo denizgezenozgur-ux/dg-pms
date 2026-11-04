@@ -497,7 +497,7 @@ function renderDetail(){const j=cur,s=status(j),steps=stepsOf(j),h=(S.jobs[j.k]&
   $("rep").textContent=buildText("both");refreshDocs();
   $("back").onclick=()=>{try{history.back()}catch(e){closeJob()}setTimeout(()=>{if(cur)closeJob()},300)};
 }
-$("dwrap").addEventListener("click",e=>{if(e.target.id==="cpPtw"){copyText(buildPTW(cur),"Çalışma izni");return}if(e.target.id==="cpRa"){copyText(buildRA(cur),"Risk değerlendirmesi");return}const b=e.target.closest("[data-st]");if(!b)return;const k=+b.dataset.k;sel[k].st=b.dataset.st;renderDetail()});
+$("dwrap").addEventListener("click",e=>{if(e.target.id==="cpPtw"){copyText(buildPTW(cur),"Çalışma izni");return}if(e.target.id==="cpRa"){copyText(buildRA(cur),"Risk değerlendirmesi");return}if(e.target.id==="dlRa"){downloadRA(cur);return}const b=e.target.closest("[data-st]");if(!b)return;const k=+b.dataset.k;sel[k].st=b.dataset.st;renderDetail()});
 $("dwrap").addEventListener("change",e=>{const t=e.target;
   if(t.dataset.r!==undefined){sel[+t.dataset.r].r=+t.value}
   else if(t.dataset.w!==undefined){sel[+t.dataset.w].why=+t.value}
@@ -602,7 +602,7 @@ function docsHTML(j){const c=RA[j.c],req=permitReq(j),v=docv;
     <pre class="report" id="ptwRep"></pre><div class="btnrow"><button class="btn o" id="cpPtw" type="button">İzni kopyala</button></div></div></details>
   <details class="doc" id="raBox"${v.raBox?" open":""}><summary>Risk Değerlendirmesi · Risk Assessment</summary>
     <div class="docin"><p class="note">${esc(c.name[1])} · şirket formundaki bölümlere göre doldurulmuştur. Mahal ve tarih izin bölümüyle ortaktır.</p>
-    <pre class="report" id="raRep"></pre><div class="btnrow"><button class="btn o" id="cpRa" type="button">Risk değerlendirmesini kopyala</button></div></div></details>`}
+    <pre class="report" id="raRep"></pre><div class="btnrow"><button class="btn o" id="dlRa" type="button">Word olarak indir (.docx)</button><button class="btn g" id="cpRa" type="button">Metin olarak kopyala</button></div></div></details>`}
 function refreshDocs(){if(!cur||!$("ptwRep"))return;$("ptwRep").textContent=buildPTW(cur);$("raRep").textContent=buildRA(cur)}
 function workTitle(j){const P=PER[j.p]||{en:j.p,tr:j.p};return [`${j.n.trim()} – ${P.en} maintenance`,`${j.tr} – ${P.tr} bakım`]}
 function whoName(w,j){if(w==="M")return["Master","Kaptan"];if(w==="CE")return["Chief Engineer","Başmühendis"];return RA_RN[rOf(j)]}
@@ -671,6 +671,40 @@ function buildPTW(j){const c=RA[j.c],p=c.permit,d=$("dDate")?$("dDate").value:is
   o.push(`Person in charge / İşten sorumlu: __________  Time / Saat: ${docv.d_e||"____"}`);
   o.push(`Permit closed by / İzni kapatan: ${issuer[0]} / ${issuer[1]}  Sign / İmza: __________`);
   return o.join("\n")}
+
+/* ---------- RA as Word: fills the company form (ra_template.docx) ---------- */
+function raFields(j){const c=RA[j.c],d=$("dDate")?$("dDate").value:iso(today()),W=workTitle(j),F={};
+  F.SHIP="Vessel/Gemi: "+(S.ship||"__________");F.DATE="Date/Tarih: "+fmt(d);
+  F.ACT="Work Activity / Aktivite: "+W[0]+"\n"+W[1];F.LOC=docv.d_loc||"__________";
+  for(let i=0;i<6;i++){const h=c.hz[i];
+    if(h){const w=whoName(h[8],j);F[`A${i}N`]=F[`C${i}N`]=String(i+1);F[`A${i}H`]=h[0]+"\n"+h[1];F[`A${i}E`]=h[2]+"\n"+h[3];F[`C${i}F`]=h[6]+"\n"+h[7];F[`C${i}D`]="Before/during work\nİş öncesi/sırası\n"+w[0]+" / "+w[1]}
+    else{F[`A${i}N`]=F[`C${i}N`]="-";F[`A${i}H`]=F[`A${i}E`]=F[`C${i}F`]=F[`C${i}D`]="-"}}
+  for(let i=0;i<10;i++){const h=c.hz[i];
+    if(h){const r=RA_MX[h[4]][h[5]];F[`B${i}N`]=String(i+1);F[`B${i}L`]=RA_LIK[h[4]].join("\n");F[`B${i}C`]=RA_CON[h[5]].join("\n");F[`B${i}R`]=RA_RISK[r].join("\n")}
+    else{F[`B${i}N`]=F[`B${i}L`]=F[`B${i}C`]="-";F[`B${i}R`]="N/A"}}
+  const t=buildRA(j).split("\n");
+  F.PRES=t.find(l=>l.startsWith("Residual risk"))+"\n"+t.find(l=>l.startsWith("Kalan risk"));
+  F.PSTOP=t.find(l=>l.startsWith("Stop work"))+"\n"+t.find(l=>l.startsWith("Güvensiz koşulda"));
+  F.PSIGN=t.filter(l=>/: _{6,}/.test(l)).join("\n");
+  F.PSCOPE="Scope: "+c.scope[0]+" Confirm location and work plan onboard.\nKapsam: "+c.scope[1]+" Mahal ve iş planını gemide doğrula.";
+  return F}
+const xesc=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+let jszipP=null;
+function loadJSZip(){if(window.JSZip)return Promise.resolve(window.JSZip);
+  return jszipP=jszipP||new Promise((ok,no)=>{const sc=document.createElement("script");sc.src="jszip.min.js";sc.onload=()=>ok(window.JSZip);sc.onerror=()=>{jszipP=null;no(new Error("jszip"))};document.head.appendChild(sc)})}
+async function downloadRA(j){
+  try{toast("Word dosyası hazırlanıyor…");
+    const [JSZip,buf]=await Promise.all([loadJSZip(),fetch("ra_template.docx").then(r=>{if(!r.ok)throw new Error("tpl");return r.arrayBuffer()})]);
+    const zip=await JSZip.loadAsync(buf),F=raFields(j);
+    let x=await zip.file("word/document.xml").async("string");
+    x=x.replace(/<w:t(?: [^>]*)?>\{\{(\w+)\}\}<\/w:t>/g,(m,k)=>'<w:t xml:space="preserve">'+xesc(F[k]!==undefined?F[k]:"").split("\n").join('</w:t><w:br/><w:t xml:space="preserve">')+"</w:t>");
+    zip.file("word/document.xml",x);
+    const blob=await zip.generateAsync({type:"blob",mimeType:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"});
+    const d=$("dDate")?$("dDate").value:iso(today());
+    const name=("RA_"+j.n.trim().replace(/[^A-Za-z0-9]+/g,"_").replace(/^_|_$/g,"").slice(0,50)+"_"+d+".docx");
+    const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();
+    setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},4000);toast("İndirildi: "+name)}
+  catch(e){toast(e.message==="jszip"||e.message==="tpl"?"Word indirme yüklü uygulamada çalışır (internet ilk seferde gerekli)":"Word dosyası oluşturulamadı")}}
 
 renderList();
 </script>

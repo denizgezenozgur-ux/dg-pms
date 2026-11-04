@@ -1,5 +1,5 @@
-const C="dg-pms-v2";
-const FILES=["./","index.html","manifest.webmanifest","icons/icon-32.png","icons/icon-180.png","icons/icon-192.png","icons/icon-512.png","icons/maskable-512.png"];
+const C="dg-pms-v3";
+const FILES=["./","index.html","manifest.webmanifest","icons/icon-32.png","icons/icon-180.png","icons/icon-192.png","icons/icon-512.png","icons/maskable-512.png","jszip.min.js","ra_template.docx"];
 self.addEventListener("install",e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(FILES)).then(()=>self.skipWaiting()))});
 self.addEventListener("activate",e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x.startsWith("dg-pms-")&&x!==C).map(x=>caches.delete(x)))).then(()=>self.clients.claim()))});
 self.addEventListener("fetch",e=>{if(e.request.method!=="GET")return;
